@@ -1,0 +1,5 @@
+astroquery
+astropy
+numpy
+matplotlib
+json

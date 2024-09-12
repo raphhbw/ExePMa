@@ -1,0 +1,38 @@
+{
+    "HD107146":
+    {
+        "name": "HD107146",
+        "inc": {
+            "median": 110.0,
+            "sigma": 0.8
+        },
+        "PA": {
+            "median": 149.0,
+            "sigma": 2.0
+        }
+    },
+    "HD92945":
+    {
+        "name": "HD92945",
+        "inc": {
+            "median": 66.8,
+            "sigma": 1.15
+        },
+        "PA": {
+            "median": 100.0,
+            "sigma": 1.5
+        }
+    },
+    "HD206893":
+    {
+        "name": "HD206893",
+        "inc": {
+            "median": 40.0,
+            "sigma": 1.0
+        },
+        "PA": {
+            "median": 61.0,
+            "sigma": 1.5
+        }
+    }
+}
