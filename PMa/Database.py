@@ -20,9 +20,9 @@ class Database():
             inc and PA are given in deg.
             Returns: Dictionary with geometry information about the system. Values depend on the geometry disctionary given to the function """
         return {"inc":discinfo.get('inc', None), # default None if no inc is given
-                "inc_err":discinfo.get('inc_err', 1.0), # default 1.0 if no inc_err is given
+                "inc_err":discinfo.get('inc_err', 1.0), # default 1.0 if no inc_err is given [TODO: check default]
                 "PA":discinfo.get('PA', None), # default None if no PA is given
-                "PA_err":discinfo.get('PA_err', 180.), # default 180. if no PA_err is given
+                "PA_err":discinfo.get('PA_err', 1.0), # default 1.0 if no PA_err is given [TODO: check default]
                 }
 
     def vizier_query(self, gaia):
