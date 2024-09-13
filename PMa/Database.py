@@ -6,7 +6,9 @@ class Database():
     V_EDR3 = Vizier(columns=["**"], catalog="J/A+A/657/A7") # Kervella+22 Vizier Catalog
 
     def __init__(self, star, **kwargs):
-        
+        """ Potential kwargs:
+            - gaia [default:'eDR3']: gaia epoch required from the Vizier catalogs
+            - geometry [default: {}]: geometry info about the system. """
         self.star = star
         self.geometry = self.build_geometryinfo(kwargs.get("geometry", {}))
         self.gaia = kwargs.get("gaia", 'eDR3')
