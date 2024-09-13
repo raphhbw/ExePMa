@@ -135,6 +135,7 @@ class PMa(Database, Plotting):
         """
         links the mass of the secondary (m2), the radial distance (rs), the mass of the primary (mstar) and the v (the norm of the
         tangential PMa vector converted to linear velocity using the Gaia parallax, "dVt" in the Vizier catalogue)
+        epoch options: Hipparcos, eDR3
         """
 
         eta = self.eta(PA_PMa, inc, PA)
