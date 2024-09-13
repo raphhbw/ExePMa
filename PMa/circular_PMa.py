@@ -1,29 +1,30 @@
 import numpy as np
-import json, os, sys
-import matplotlib.pyplot as plt
+import os, sys
 
 from PMa.Database import Database
 from PMa.plotting import Plotting
 
 class PMa(Database, Plotting):
     ### units
-    Msun=1.989e+30 # kg
-    au=1.496e+11   # m
-    year=365.24 # days
+    M_SUN=1.989e+30 # kg
+    AU=1.496e+11   # m
+    YEAR=365.24 # days
     G=6.67408e-11 # mks
-    Mjup=1.898e27 # kg
+    M_JUP=1.898e27 # kg
 
     # epochs
-    epochs_dt = {"DR2":668., "eDR3":1038., "Hipparcos":1227.} # days
-    epochs_dt_HG = {"DR2":24.25, "eDR3":24.75} # years
+    EPOCHS_DT = {"DR2":668., "eDR3":1038., "Hipparcos":1227.} # days
+    EPOCHS_DT_HG = {"DR2":24.25, "eDR3":24.75} # years
 
-    def __init__(self, discdata, gaia, iparam, odir=None):
-        self.odir = odir
-        self.gaia = gaia
-        Database.__init__(self, discdata, gaia=gaia, iparam=iparam)
-        Plotting.__init__(self)
+    def __init__(self, star, **kwargs):
+
+        ### Get all information from Vizier catalog
+        Database.__init__(self, star, **kwargs) # creating data DataFrame
         print(self.data)
-        print('-------')
+        print('-----------------')
+
+        ### Initialise Plotting
+        # Plotting.__init__(self)
 
     def gamma(self, Pp):
         """
@@ -67,7 +68,7 @@ class PMa(Database, Plotting):
 
         # Randomly pick position of the star in orbit Nrandom times (Mean Anomaly)
         M1 = np.random.uniform(0.0, 2.*np.pi, Nrandom) # mean anomaly at Hipparcos
-        M2 = M1 + 2.0*np.pi * self.epochs_dt_HG[gaia]/period # mean anomaly at Gaia epoch (after epochs_dt_HG)
+        M2 = M1 + 2.0*np.pi * self.EPOCHS_DT_HG[gaia]/period # mean anomaly at Gaia epoch (after epochs_dt_HG)
 
         # Assume circular orbit and get tangential velocity vector at different epochs
         if epoch == 'DR2' or epoch == 'eDR3':
@@ -77,15 +78,14 @@ class PMa(Database, Plotting):
             vx = -np.sin(M1)
             vy = np.cos(M1)
         else:
-            print('wrong epoch')
-            return -1.
+            return NotImplementedError('Wrong epoch chosen')
         
         # calculate difference in position between position in Hipparcos and Gaia
         deltar_x = np.cos(M2) - np.cos(M1)
         deltar_y = np.sin(M2) - np.sin(M1)
 
         C = period/(2.*np.pi)
-        zeta =  np.sqrt( (vx - C * deltar_x/self.epochs_dt_HG[gaia])**2. +  (vy - C*deltar_y/self.epochs_dt_HG[gaia])**2. )
+        zeta =  np.sqrt( (vx - C * deltar_x/self.EPOCHS_DT_HG[gaia])**2. +  (vy - C*deltar_y/self.EPOCHS_DT_HG[gaia])**2. )
 
         return zeta
     
@@ -97,7 +97,7 @@ class PMa(Database, Plotting):
         """
         
         M1 = np.random.uniform(0.0, 2.*np.pi, Nrandom) # mean anomaly at Hipparcos
-        M2 = M1 + 2.0*np.pi * self.epochs_dt_HG[gaia]/period # mean anomaly at Gaia epoch (after epochs_dt_HG)
+        M2 = M1 + 2.0*np.pi * self.EPOCHS_DT_HG[gaia]/period # mean anomaly at Gaia epoch (after epochs_dt_HG)
 
         # circular orbit
         if epoch == 'DR2' or epoch == 'eDR3':
@@ -107,23 +107,19 @@ class PMa(Database, Plotting):
             vx = -np.sin(M1)
             vy = np.cos(M1)
         else:
-            print('wrong epoch')
-            return -1.
+            return NotImplementedError('Wrong epoch chosen')
 
         deltar_x = np.cos(M2) - np.cos(M1)
         deltar_y = (np.sin(M2) - np.sin(M1)) * cosi
         vy = vy * cosi
         C = period / (2.*np.pi)
-
-        # zeta_x=vx - C*deltar_x/delta_t_HG
-        # zeta_y=vy - C*deltar_y/delta_t_HG
         
-        zeta =  np.sqrt( (vx - C*deltar_x/self.epochs_dt_HG[gaia])**2. +  (vy - C*deltar_y/self.epochs_dt_HG[gaia])**2. )/np.sqrt(vx**2+vy**2)
+        zeta =  np.sqrt( (vx - C*deltar_x/self.EPOCHS_DT_HG[gaia])**2. +  (vy - C*deltar_y/self.EPOCHS_DT_HG[gaia])**2. )/np.sqrt(vx**2+vy**2)
         return zeta
 
     def calculate_zeta(self, P, epoch, known_inc, inc, Nrandom):
         zeta = np.zeros((len(P), Nrandom))
-
+        # [TODO: check what to do about zeta_v2]
         # for i, period in enumerate(P):
         #     if known_inc: # when inc and PA are known
         #         zeta[i,:] = self.zeta(period, Nrandom=Nrandom, epoch=epoch, gaia=self.gaia)
@@ -145,23 +141,23 @@ class PMa(Database, Plotting):
         periods = self.period(rs, m=self.data['params']['mstar'][0]) # years        
         zeta = self.calculate_zeta(P=periods, epoch=epoch, known_inc=know_inc, inc=inc, Nrandom=Nrandom)
 
-        const = np.sqrt(self.data['params']['mstar'][0] * self.Msun / self.G)
-        r_term = const * np.sqrt(rs * self.au) / self.gamma(periods/(self.epochs_dt[epoch] / self.year))
+        const = np.sqrt(self.data['params']['mstar'][0] * self.M_SUN / self.G)
+        r_term = const * np.sqrt(rs * self.AU) / self.gamma(periods/(self.EPOCHS_DT[epoch] / self.YEAR))
         corr_vel = v / eta
 
         mass = np.matmul(np.array([r_term]).T, np.array([corr_vel])) / zeta # Mstar
-        return mass / self.Mjup # masses in Mjup
+        return mass / self.M_JUP # masses in Mjup
     
     def get_mass_MC(self, data, rs, epoch, Nrandom):
         """
         Calculates the mass of companion causing the PMa
-        rs [au], PMa [mas], parallax [mas], inc [deg], PA [deg], mstar [Msun] (default is 1.0), default gaia is 'eDR3'
+        rs [au], PMa [mas], parallax [mas], inc [deg], PA [deg], mstar [Msun], default gaia is 'eDR3'
         returns ±1,2,3 sigma and mean of m2 at the given rs
         """
         PMa_ras = np.random.normal(data[epoch]['PMa_ra'][0], data[epoch]['PMa_ra_err'][0], Nrandom)
         PMa_decs=np.random.normal(data[epoch]['PMa_dec'][0], data[epoch]['PMa_dec_err'][0], Nrandom)
 
-        if data['params']['inc'][0] is None or data['params']['inc_err'][0] is None:
+        if data['params']['inc'][0] is None:
             print('unknown system inc')
             know_inc = False
             incs=np.arccos(np.random.uniform(0.0, 1.0, Nrandom))*180/np.pi 
@@ -169,7 +165,7 @@ class PMa(Database, Plotting):
             incs=np.random.normal(data['params']['inc'][0], data['params']['inc_err'][0], Nrandom)
             know_inc = True
 
-        if data['params']['PA'][0] is None or data['params']['PA_err'][0] is None:
+        if data['params']['PA'][0] is None:
             print('unknown system PA')
             PAs=np.random.uniform(0.0, 180.0, Nrandom)
         else:
@@ -179,8 +175,8 @@ class PMa(Database, Plotting):
         ms = np.zeros((len(rs), 7)) # ±1,2,3 sigma + mean
 
         PAs_PMa = np.zeros(Nrandom)
-        ###### MC
 
+        ### MC
         v_ = np.sqrt(PMa_ras**2. + PMa_decs**2.) / data['params']['parallax'][0] *4740.470 # m/s        
         PAs_PMa[:] = np.arctan2(PMa_ras, PMa_decs)*180./np.pi # deg
 
@@ -195,49 +191,49 @@ class PMa(Database, Plotting):
 
         return ms
     
-    def mass_retrieval(self, aps, Nrandom, epoch, subdir=None):
+    def mass_retrieval(self, epoch, **kwargs):
+        """ Gets the mass of the planet necessary to explain the PMa 
+            Method is from Kervella+2019.
+            Returns: result from mcmc
+            
+            Potential kwargs:
+                - Na [default: 300]: number of semi-major axis to sample
+                - aps [default: np.logspace(-0.5, 2.5, Na)]: semi-major axis values in au
+                - Nrandom [default: 10000]: number of random PMa values per radius
+                - save [default: True]: flag for saving the PMa info into a directory
+                - subdir [default: 'log']: name of the repository to save PMa info into
+                - odir [default; './']: path to have the subdir
+                """
+        Na = kwargs.get('Na', 300)
+        aps = kwargs.get('aps', np.logspace(-0.5, 2.5, Na))
+        Nrandom = kwargs.get('Nrandom', 10000)
+        save = kwargs.get('save', True)
+        subdir = kwargs.get('subdir', 'log')
+        odir = kwargs.get('odir', './')
 
-        try:
-            dir = self.odir + subdir + '/'
-            if self.discdata['PA'] is None:
-                if self.discdata['inc'] is None:
-                    file_path = 'PMa_limits_{}_{}_noPA_noInc.txt'.format(epoch, self.target)
+        if save:
+            PMadir = odir + subdir + '/'
+            if not os.path.exists(PMadir):
+                os.makedirs(PMadir)
+
+            ### create filepath for saving PMa info
+            if self.data['params']['PA'][0] is None:
+                if self.data['params']['inc'][0] is None:
+                    file_path = f'PMa_limits_{epoch}_{self.star}_noPA_noInc.txt'
                 else:
-                    file_path = 'PMa_limits_{}_{}_noPA.txt'.format(epoch, self.target)
+                    file_path = f'PMa_limits_{epoch}_{self.star}_noPA.txt'
             else:
-                if self.discdata['inc'] is None:
-                    file_path = 'PMa_limits_{}_{}_noInc.txt'.format(epoch, self.target)
+                if self.data['params']['inc'][0] is None:
+                    file_path = f'PMa_limits_{epoch}_{self.star}_noInc.txt'
                 else:
-                    file_path = 'PMa_limits_{}_{}.txt'.format(epoch, self.target)
+                    file_path = f'PMa_limits_{epoch}_{self.star}.txt'
 
-            if os.path.exists(dir+file_path):
-                answer = False
-                while answer == False:
-                    recalculate = input('Results already ran for this star, do you want to recalculate? [y/n]')
-                    if recalculate == 'y':
-                        answer = True
-                        ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)  
-                        saved_ms = np.vstack([aps, ms.T]).T
-                        print('Saving ms for {}'.format(epoch))
-                        np.savetxt(dir+file_path, saved_ms, 
-                    header='Percentiles from Monte Carlo simulation\n semi-major axis\t  0.135\t 2.28\t 15.9\t 50\t 84.2\t 97.7\t 99.865')
-                    elif recalculate == 'n':
-                        answer = True
-                        saved_ms = np.loadtxt(dir+file_path)
-                    else:
-                        print('Answer again...')
-                        answer = False
-            else:
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
-                ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)
-                saved_ms = np.vstack([aps, ms.T]).T
-                print('Saving ms for {}'.format(epoch))
-                np.savetxt(dir+file_path, saved_ms, 
-                    header='Percentiles from Monte Carlo simulation\n semi-major axis\t  0.135\t 2.28\t 15.9\t 50\t 84.2\t 97.7\t 99.865')
+        ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)  
+        saved_ms = np.vstack([aps, ms.T]).T
 
-        except: # no saving
-            ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)
-            saved_ms = np.vstack([aps, ms.T]).T
+        if save:
+            print(f'Saving ms for {epoch}')
+            np.savetxt(PMadir+file_path, saved_ms, 
+            header='Percentiles from Monte Carlo simulation\n semi-major axis\t  0.135\t 2.28\t 15.9\t 50\t 84.2\t 97.7\t 99.865')
 
         return saved_ms
