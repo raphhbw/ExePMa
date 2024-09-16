@@ -197,20 +197,23 @@ class PMa(Database, Plotting):
             Method is from Kervella+2019.
             Returns: result from mcmc
             
-            Potential kwargs:
+            Potential kwargs inside of pma_params dict:
                 - Na [default: 300]: number of semi-major axis to sample
                 - aps [default: np.logspace(-0.5, 2.5, Na)]: semi-major axis values in au
                 - Nrandom [default: 10000]: number of random PMa values per radius
-                - save [default: True]: flag for saving the PMa info into a directory
+                - savelog [default: True]: flag for saving the PMa info into a directory
                 - subdir [default: 'log']: name of the repository to save PMa info into
                 - odir [default; './']: path to have the subdir
                 """
-        Na = kwargs.get('Na', 300)
-        aps = kwargs.get('aps', np.logspace(-0.5, 2.5, Na))
-        Nrandom = kwargs.get('Nrandom', 10000)
-        savelog = kwargs.get('savelog', True)
-        subdir = kwargs.get('subdir', 'log')
-        odir = kwargs.get('odir', './')
+        # read in any kwargs params
+        pma_params = kwargs.get('pma_params', {})
+        # default values if not in pma_params
+        Na = pma_params.get('Na', 300)
+        aps = pma_params.get('aps', np.logspace(-0.5, 2.5, Na))
+        Nrandom = pma_params.get('Nrandom', 10000)
+        savelog = pma_params.get('savelog', True)
+        subdir = pma_params.get('subdir', 'log')
+        odir = pma_params.get('odir', './')
 
         if savelog:
             PMadir = odir + subdir + '/'
