@@ -1,5 +1,5 @@
-from PMa import Database
-from PMa import circular_PMa
+from ExePMa import Database
+from ExePMa import circular_PMa
 import matplotlib.pyplot as plt
 # Personal matplotlib style lib
 plt.style.use('images_inv')

@@ -3,3 +3,4 @@ astropy
 numpy
 matplotlib
 json
+pandas
