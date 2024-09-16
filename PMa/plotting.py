@@ -11,85 +11,92 @@ class Plotting():
     
     def arc2au(self, x):
         return x * self.data['params']['dpc'][0]
+
+    def plot_pma(self, ax, epoch, **kwargs):
+        """ Plotting PMa curve function.
+            Choose your epoch [eDR3 or Hipparcos] for your curve. If snr > 3 [default] curve will be plotted. 
+            Kwargs:
+                - plotting_params [dict]:
+                    - snr [default: 3.0]: snr determines the strength of the PMa
+                    - color [default: [C1, C0]]: colour for Hipparcos, Gaia curves
+                    - alpha [default: 0.1]
+                - pma_params [dict] given to mass_retrieval function
+        """
+        # read in any plotting kwargs params
+        plotting_params = kwargs.get('plotting_params', {})
+        # default values if not in plotting_params
+        snr = plotting_params.get('snr', 3.0)
+        color = plotting_params.get('color', ['C1', 'C0'])
+        alpha = plotting_params.get('alpha', 0.1)
+
+        pma_data = self.mass_retrieval(epoch=epoch, **kwargs)
+
+        aps = pma_data[:,0]
+        ms = pma_data[:,1:]
+
+        if self.data[epoch]['S_N'][0] >= snr:
+            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
+            ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
+            ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
+            ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma
+        else: # upper limits when significance < snr
+            ax.plot(aps, ms[:,6], color=color[0] if epoch=='Hipparcos' else color[1], label=f'Upper limit {epoch} PMa')
+
+        return ax, aps
     
-    def saving_path(self, subdir):
-        
-        dir = self.odir + subdir + '/'
-        if self.discdata['PA'] is None:
-            if self.discdata['inc'] is None:
-                file_path = 'Figure_PMa_{}_noPA_noInc.pdf'.format(self.target)
-            else:
-                file_path = 'Figure_PMa_{}_noPA.pdf'.format(self.target)
-        else:
-            if self.discdata['inc'] is None:
-                file_path = 'Figure_PMa_{}_noInc.pdf'.format(self.target)
-            else:
-                file_path = 'Figure_PMa_{}.pdf'.format(self.target)
+    def add_axis_info(self, ax, **kwargs):
+        """ Add legends + axis information for plot.
+        Kwargs:
+            - plotting_params [dict]:
+                - xlim [default [0.3, 300]]: xlimit with [xmin, xmax]
+                - ylim [default [3.0e-1, 1.0e2]]: ylimit with [ymin, ymax]
+        """
+        # read in any plotting kwargs params
+        plotting_params = kwargs.get('plotting_params', {})
+        # default values if not in plotting_params
+        xlim = plotting_params.get('xlim', [0.3, 300])
+        ylim = plotting_params.get('ylim', [3.0e-1, 1.0e2])
 
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        
-        return dir+file_path
-        
-    def plot(self, data_hip, data_gaia, figsize, only_save = False, subdir=None, snr=3.0, disc=False, mstar=False):
-        # Retrieve radius and percentiles
-        aps = data_gaia[:,0]
-        ms_gaia = data_gaia[:,1:]
-        ms_hip = data_hip[:,1:]
-
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
-
-        if self.data['Hipparcos']['S_N'][0] >= snr:
-            plt.plot(aps, ms_hip[:,3], color='C1', label='Hipp PMa')
-            plt.fill_between(aps, ms_hip[:,2], ms_hip[:,4], alpha=0.1, color='C1')
-            plt.fill_between(aps, ms_hip[:,1], ms_hip[:,5], alpha=0.1, color='C1')
-            plt.fill_between(aps, ms_hip[:,0], ms_hip[:,6], alpha=0.1, color='C1')
-        else:
-            plt.plot(aps, ms_hip[:,6], color='C1', label='Upper limit Hipp PMa')
-
-        if self.data[self.gaia]['S_N'][0] >= snr:
-            ax.plot(aps, ms_gaia[:,3], color='C0', label='eDR3 PMa')
-            ax.fill_between(aps, ms_gaia[:,2], ms_gaia[:,4], alpha=0.2, color='C0')
-            ax.fill_between(aps, ms_gaia[:,1], ms_gaia[:,5], alpha=0.2, color='C0')
-            ax.fill_between(aps, ms_gaia[:,0], ms_gaia[:,6], alpha=0.2, color='C0')
-        else:
-            ax.plot(aps, ms_gaia[:,6], color='C0', label='Upper limit eDR3 PMa')
-
-        if disc != False:
-            rin, rout = disc
-            ax.axvline(rin, color='grey', ls='--', lw=1.)
-            ax.axvline(rout, color='grey', ls='--', lw=1.)
-
-            Mpldisc=np.ones_like(aps)*1.0e-2
-            NRhill=3.
-
-            Mpldisc[aps<rin]=np.maximum(3/NRhill**3 *mstar * ( (rin/aps[aps<rin] -1.) )**(3.), Mpldisc[aps<rin])
-            Mpldisc[aps>rout]=np.maximum(3/NRhill**3 *mstar * ( ( 1.-rout/aps[aps>rout]))**(3.),Mpldisc[aps>rout])
-            ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color='C1', alpha=0.4, hatch='//')
-        
         ax.set_ylabel(r'$M_{\rm p}$ [$M_\mathrm{jup}$]')
         ax.set_xlabel(r'$a_{\rm p}$ [au]')
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_xlim(aps[0], aps[-1])
-        ax.set_ylim(3.0e-1, 1.0e3)
-        ax.legend(frameon=False, loc=3, fontsize=8)
+        ax.set_xlim(xlim[0], xlim[1])
+        ax.set_ylim(ylim[0], ylim[1])
+        ax.legend(frameon=False, loc=3)
 
         ax.tick_params(which='both', top=False)
-
         secax = ax.secondary_xaxis('top', functions=(self.au2arc, self.arc2au))
         secax.set_xlabel(r'$a_{\rm p}$ [arcsec]')
+        return ax
+    
+    def plot_disc_extent(self, ax, aps, discdata, **kwargs):
+        """ Plot the disc extent + rhill argument for edge truncation.
+            Kwargs options:
+                - plotting_params [dict]:
+                    - disc_color [default: C1]: colour given to the disc
+                    - disc_alpha [default 0.4]
+                - discdata [dict]:
+                    - r_in: inner edge location in au
+                    - r_out: outer edge location in au
+                    - NRhill [default 3.0]: number of hill radii 
+        """
+        # read in any plotting kwargs params
+        plotting_params = kwargs.get('plotting_params', {})
+        # default values if not in plotting_params
+        disc_color = plotting_params.get('disc_color', 'C1')
+        disc_alpha = plotting_params.get('disc_alpha', 0.4)
 
-        plt.tight_layout()
-        if subdir is not None:
-            save_path = self.saving_path(subdir=subdir)
-            if only_save:
-                print('Saving figure...')
-                plt.savefig(save_path)
-            else:
-                plt.savefig(save_path)
-                print('Saving figure...')
-                plt.show()
-        else:
-            plt.show()
+        r_in = discdata.get('r_in')
+        r_out = discdata.get('r_out')
+        NRhill = discdata.get('NRhill', 3.0)
+
+        # Plot disc edges
+        ax.axvline(r_in, color='grey', ls='--', lw=1.)
+        ax.axvline(r_out, color='grey', ls='--', lw=1.)
+        
+        Mpldisc=np.ones_like(aps)*1.0e-2
+        Mpldisc[aps<r_in]=np.maximum(3/NRhill**3 *self.data['params']['mstar'][0]*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
+        Mpldisc[aps>r_out]=np.maximum(3/NRhill**3 *self.data['params']['mstar'][0]*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
+        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//')
+        return ax
