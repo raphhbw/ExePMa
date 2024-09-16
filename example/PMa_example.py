@@ -15,8 +15,8 @@ star = 'HD92945'
 geometry = {"inc": 30.,
             "PA": 20.}
 # Disc information
-# {"r_in": value,
-#  "r_out": value,
+# {"r_in": value, Requires value
+#  "r_out": value, Requires value
 #  "NRhill": value [default 3.0]}
 disc_data = {"r_in":45,
              "r_out":120}
@@ -40,16 +40,13 @@ pma_params = {"savelog": False}
 #  "disc_alpha": value [default 0.4]}
 plotting_params = {"snr": 3.0}
 
-### Testing Database
-# GetData = Database.Database(star=star, 
-#                             geometry=geometry
-#                             )
-# print(GetData.data)
-
 ### Initialise main PMa function
 GetPMa = circular_PMa.PMa(star=star,
                           geometry=geometry
                           )
+# Retrive database with PMa info + stellar info
+# print(GetPMa.data)
+
 ### Test mass_retrival function
 # gaia_ms = GetPMa.mass_retrieval(epoch='eDR3', pma_params=pma_params)
 
