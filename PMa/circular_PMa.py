@@ -24,7 +24,7 @@ class PMa(Database, Plotting):
         print('-----------------')
 
         ### Initialise Plotting
-        # Plotting.__init__(self)
+        Plotting.__init__(self)
 
     def gamma(self, Pp):
         """
@@ -208,11 +208,11 @@ class PMa(Database, Plotting):
         Na = kwargs.get('Na', 300)
         aps = kwargs.get('aps', np.logspace(-0.5, 2.5, Na))
         Nrandom = kwargs.get('Nrandom', 10000)
-        save = kwargs.get('save', True)
+        savelog = kwargs.get('savelog', True)
         subdir = kwargs.get('subdir', 'log')
         odir = kwargs.get('odir', './')
 
-        if save:
+        if savelog:
             PMadir = odir + subdir + '/'
             if not os.path.exists(PMadir):
                 os.makedirs(PMadir)
@@ -232,7 +232,7 @@ class PMa(Database, Plotting):
         ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)  
         saved_ms = np.vstack([aps, ms.T]).T
 
-        if save:
+        if savelog:
             print(f'Saving ms for {epoch}')
             np.savetxt(PMadir+file_path, saved_ms, 
             header='Percentiles from Monte Carlo simulation\n semi-major axis\t  0.135\t 2.28\t 15.9\t 50\t 84.2\t 97.7\t 99.865')
