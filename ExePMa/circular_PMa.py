@@ -1,8 +1,8 @@
 import numpy as np
-import os, sys
+import os
 
-from PMa.Database import Database
-from PMa.plotting import Plotting
+from ExePMa.Database import Database
+from ExePMa.plotting import Plotting
 
 class PMa(Database, Plotting):
     ### units

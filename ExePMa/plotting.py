@@ -1,6 +1,4 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import os
 
 class Plotting():
     def __init__(self):
