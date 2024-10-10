@@ -24,6 +24,7 @@ class Plotting():
         plotting_params = kwargs.get('plotting_params', {})
         # default values if not in plotting_params
         snr = plotting_params.get('snr', 3.0)
+        upper_limit = plotting_params.get('upper_limit', False)
         color = plotting_params.get('color', ['C1', 'C0'])
         alpha = plotting_params.get('alpha', 0.1)
 
@@ -38,7 +39,8 @@ class Plotting():
             ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
             ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma
         else: # upper limits when significance < snr
-            ax.plot(aps, ms[:,6], color=color[0] if epoch=='Hipparcos' else color[1], label=f'Upper limit {epoch} PMa')
+            if upper_limit:
+                ax.plot(aps, ms[:,6], color=color[0] if epoch=='Hipparcos' else color[1], label=f'Upper limit {epoch} PMa')
 
         return ax, aps
     
