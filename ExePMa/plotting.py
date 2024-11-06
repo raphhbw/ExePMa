@@ -1,6 +1,13 @@
 import numpy as np
 
 class Plotting():
+    ### units
+    M_SUN=1.989e+30 # kg
+    AU=1.496e+11   # m
+    YEAR=365.24 # days
+    G=6.67408e-11 # mks
+    M_JUP=1.898e27 # kg
+    
     def __init__(self):
         pass
 
@@ -70,7 +77,7 @@ class Plotting():
         secax.set_xlabel(r'$a_{\rm p}$ [arcsec]')
         return ax
     
-    def plot_disc_extent(self, ax, aps, discdata, **kwargs):
+    def plot_disc_extent(self, ax, aps, discdata, mstar, **kwargs):
         """ Plot the disc extent + rhill argument for edge truncation.
             Kwargs options:
                 - plotting_params [dict]:
@@ -96,7 +103,7 @@ class Plotting():
         ax.axvline(r_out, color='grey', ls='--', lw=1.)
         
         Mpldisc=np.ones_like(aps)*1.0e-2
-        Mpldisc[aps<r_in]=np.maximum(3/NRhill**3 *self.data['params']['mstar'][0]*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
-        Mpldisc[aps>r_out]=np.maximum(3/NRhill**3 *self.data['params']['mstar'][0]*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
-        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//')
+        Mpldisc[aps<r_in]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
+        Mpldisc[aps>r_out]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
+        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc')
         return ax
