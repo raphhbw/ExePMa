@@ -23,6 +23,7 @@ class Plotting():
             Kwargs:
                 - plotting_params [dict]:
                     - snr [default: 3.0]: snr determines the strength of the PMa
+                    - upper_limit [default: False]: plots upper limit when PMa not significant enough
                     - color [default: [C1, C0]]: colour for Hipparcos, Gaia curves
                     - alpha [default: 0.1]
                 - pma_params [dict] given to mass_retrieval function
