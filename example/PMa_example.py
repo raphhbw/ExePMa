@@ -2,7 +2,7 @@ from ExePMa import Database
 from ExePMa import circular_PMa
 import matplotlib.pyplot as plt
 # Personal matplotlib style lib
-plt.style.use('images_inv')
+# plt.style.use('~/matplotlib_styles/images_inv.mplstyle')
 
 ## System information
 star = 'HD92945'
@@ -32,6 +32,7 @@ pma_params = {"savelog": False}
 
 ## Plotting parameters
 # {"snr": value [default 3.0],
+#  "upper_limit": Boolean [default: False],
 #  "color": array colour [default ['C1', 'C0']],
 #  "alpha": value [default 0.1],
 #  "xlim": array xmin, xmax [default [0.3,300]],
@@ -51,12 +52,17 @@ GetPMa = circular_PMa.PMa(star=star,
 # gaia_ms = GetPMa.mass_retrieval(epoch='eDR3', pma_params=pma_params)
 
 ### Plotting test with PMa curves
-fig, ax = plt.subplots(1, figsize=(8,6))
+fig, ax = plt.subplots(1, figsize=(4,3))
 # Generate PMa curve for one epoch [either eDR3 or Hipparcos]
 ax, aps = GetPMa.plot_pma(ax, epoch='eDR3', pma_params=pma_params, plotting_params=plotting_params)
 ax, aps = GetPMa.plot_pma(ax, epoch='Hipparcos', pma_params=pma_params, plotting_params=plotting_params)
 # Add axis information
 ax = GetPMa.add_axis_info(ax)
+ax.text(30, 0.6, star, color='k', fontsize=10)
 # Add disc inner and outer edges information + planet truncation argument
-ax = GetPMa.plot_disc_extent(ax=ax, aps=aps, discdata=disc_data)
+# Needed to calculate RHill. Could change manually.
+mstar = GetPMa.data["params"]["mstar"][0]
+ax = GetPMa.plot_disc_extent(ax=ax, aps=aps, discdata=disc_data, mstar=mstar)
+
+plt.tight_layout()
 plt.show()
