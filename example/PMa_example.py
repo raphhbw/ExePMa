@@ -39,9 +39,11 @@ pma_params = {"savelog": False}
 #  "max_x": value [default None], used as a mask for aps
 #  "xlim": array [default [0.3, 300]], plt limits
 #  "ylim": array [default [3.0e-1, 1.0e2]], plt limits
+#  "label": string [default '{epoch} PMa'],
 #  "disc_color": colour [default 'C1'],
 #  "disc_alpha": value [default 0.4]}
-plotting_params = {"snr": 3.0}
+plotting_params = {"snr": 3.0,
+                   "label": "test"}
 
 ### Initialise main PMa function
 GetPMa = circular_PMa.PMa(star=star,
