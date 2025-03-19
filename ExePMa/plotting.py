@@ -24,6 +24,7 @@ class Plotting():
                 - plotting_params [dict]:
                     - snr [default: 3.0]: snr determines the strength of the PMa
                     - upper_limit [default: False]: plots upper limit when PMa not significant enough
+                    - min_x, min_y [default None]: mask for aps
                     - color [default: [C1, C0]]: colour for Hipparcos, Gaia curves
                     - alpha [default: 0.1]
                 - pma_params [dict] given to mass_retrieval function
@@ -35,11 +36,29 @@ class Plotting():
         upper_limit = plotting_params.get('upper_limit', False)
         color = plotting_params.get('color', ['C1', 'C0'])
         alpha = plotting_params.get('alpha', 0.1)
+        min_x = plotting_params.get('min_x', None)
+        max_x = plotting_params.get('max_x', None)
 
         pma_data = self.mass_retrieval(epoch=epoch, **kwargs)
 
         aps = pma_data[:,0]
         ms = pma_data[:,1:]
+
+        # Conditions on aps based on min_x and max_x
+        if min_x is not None and max_x is not None: #min_x and max_x have values
+            mask = (aps >= min_x) & (aps <= max_x)
+            aps = aps[mask]
+            ms = ms[mask]
+        elif min_x is not None and max_x is None: #min_x has value, max_x is None
+            mask = aps >= min_x
+            aps = aps[mask]
+            ms = ms[mask]
+        elif min_x is None and max_x is not None: #min_x is None, max_x has value
+            mask = aps <= max_x
+            aps = aps[mask]
+            ms = ms[mask]
+        else: #min_x and max_x are None
+            pass
 
         if self.data[epoch]['S_N'][0] >= snr:
             ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
