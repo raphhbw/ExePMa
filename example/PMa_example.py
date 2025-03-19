@@ -35,8 +35,8 @@ pma_params = {"savelog": False}
 #  "upper_limit": Boolean [default: False],
 #  "color": array colour [default ['C1', 'C0']],
 #  "alpha": value [default 0.1],
-#  "xlim": array xmin, xmax [default [0.3,300]],
-#  "ylim": array ymin, ymax [default [3.0e-1, 1.0e2]],
+#  "min_x": value [default None], used as a mask for aps
+#  "max_x": value [default None], used as a mask for aps
 #  "disc_color": colour [default 'C1'],
 #  "disc_alpha": value [default 0.4]}
 plotting_params = {"snr": 3.0}
