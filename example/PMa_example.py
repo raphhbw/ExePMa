@@ -42,8 +42,7 @@ pma_params = {"savelog": False}
 #  "label": string [default '{epoch} PMa'],
 #  "disc_color": colour [default 'C1'],
 #  "disc_alpha": value [default 0.4]}
-plotting_params = {"snr": 3.0,
-                   "label": "test"}
+plotting_params = {"snr": 3.0}
 
 ### Initialise main PMa function
 GetPMa = circular_PMa.PMa(star=star,
