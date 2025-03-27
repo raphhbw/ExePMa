@@ -1,6 +1,7 @@
 import pandas as pd
 from astroquery.vizier import Vizier
 import astropy.units as u
+import numpy as np
 
 class Database():
     V_EDR3 = Vizier(columns=["**"], catalog="J/A+A/657/A7") # Kervella+22 Vizier Catalog
@@ -38,24 +39,41 @@ class Database():
         if gaia == 'eDR3':
             # Query catalog
             results = self.V_EDR3.query_object(self.star, radius=1*u.arcmin)
+            query_okay = True
+            if len(results) == 0:
+                query_okay = False
+            elif len(results[0]) == 0:
+                query_okay = False
+            
+            if query_okay == False:
+                results = self.V_EDR3.query_object(self.star, radius=1*u.deg)
+                
             # Get Hip data
-            dhip['S_N'] = results[0]['snrPMaH2EG3a'].data[0] # SNR hip - HipeDR3
-            dhip['PMa_ra'] = results[0]['PMaRAH2EG3a'].data[0] # PMa Right Ascension hip - HipeDR3
-            dhip['PMa_ra_err'] = results[0]['e_PMaRAH2EG3a'].data[0] # PMa Right Ascension err hip - HipeDR3
-            dhip['PMa_dec'] = results[0]['PMaDEH2EG3a'].data[0] # PMa Dec hip - HipeDR3
-            dhip['PMa_dec_err'] = results[0]['e_PMaDEH2EG3a'].data[0] # PMa Dec err hip - HipeDR3
+            hip_name = int(self.star.replace('HIP ',''))
+            query_hip_names = np.array(results[0]['HIP'])
+            
+            w, = np.where(query_hip_names == hip_name)
+            if len(w) == 0:
+                raise ValueError(f"The star {self.star} could not be found in Kervella's catalog. Please do a manual query to understand why.")
+            w = w[0]
+            
+            dhip['S_N'] = results[0]['snrPMaH2EG3a'].data[w] # SNR hip - HipeDR3
+            dhip['PMa_ra'] = results[0]['PMaRAH2EG3a'].data[w] # PMa Right Ascension hip - HipeDR3
+            dhip['PMa_ra_err'] = results[0]['e_PMaRAH2EG3a'].data[w] # PMa Right Ascension err hip - HipeDR3
+            dhip['PMa_dec'] = results[0]['PMaDEH2EG3a'].data[w] # PMa Dec hip - HipeDR3
+            dhip['PMa_dec_err'] = results[0]['e_PMaDEH2EG3a'].data[w] # PMa Dec err hip - HipeDR3
             
             # Get eDR3 data
-            dgaia['S_N'] = results[0]['snrPMaH2EG3b'].data[0] # SNR eDR3 - HipeDR3
-            dgaia['PMa_ra'] = results[0]['PMaRAH2EG3b'].data[0] # PMa Right Ascension eDR3 - HipeDR3
-            dgaia['PMa_ra_err'] = results[0]['e_PMaRAH2EG3b'].data[0] # PMa Right Ascension err eDR3 - HipeDR3
-            dgaia['PMa_dec'] = results[0]['PMaDEH2EG3b'].data[0] # PMa Dec eDR3 - HipeDR3
-            dgaia['PMa_dec_err'] = results[0]['e_PMaDEH2EG3b'].data[0] # PMa Dec err eDR3 - HipeDR3
+            dgaia['S_N'] = results[0]['snrPMaH2EG3b'].data[w] # SNR eDR3 - HipeDR3
+            dgaia['PMa_ra'] = results[0]['PMaRAH2EG3b'].data[w] # PMa Right Ascension eDR3 - HipeDR3
+            dgaia['PMa_ra_err'] = results[0]['e_PMaRAH2EG3b'].data[w] # PMa Right Ascension err eDR3 - HipeDR3
+            dgaia['PMa_dec'] = results[0]['PMaDEH2EG3b'].data[w] # PMa Dec eDR3 - HipeDR3
+            dgaia['PMa_dec_err'] = results[0]['e_PMaDEH2EG3b'].data[w] # PMa Dec err eDR3 - HipeDR3
 
             # Get star info
-            dparams['parallax'] = results[0]['PlxG3'].data[0] # mas
+            dparams['parallax'] = results[0]['PlxG3'].data[w] # mas
             dparams['dpc'] = 1./(dparams['parallax']*1.0e-3)
-            dparams['mstar'] = results[0]['M1'].data[0]
+            dparams['mstar'] = results[0]['M1'].data[w]
 
             # Add geometry info to star info
             dparams['PA'] = self.geometry['PA']
@@ -71,7 +89,7 @@ class Database():
         return dhip, dgaia, dparams
     
     def get_data(self, gaia):
-        d= {}
+        d = {}
         
         # Query data from Kervella vizier catalog
         dhip, dgaia, dparams = self.vizier_query(gaia)
@@ -81,3 +99,42 @@ class Database():
         d['params'] = pd.DataFrame(data=dparams).set_index('star')
 
         return pd.concat(d, axis=1)
+
+    def create_single_star_table(self, local_catalog):
+
+        dhip = {'star':[self.star]}
+        dgaia = {'star':[self.star]}
+        dparams = {'star':[self.star]}
+        
+        hip_names = np.array([f'HIP {i}' for i in local_catalog['HIP']])
+        w, = np.where(hip_names == self.star)
+        if len(w) == 0:
+            raise ValueError(f'Star {self.star} was not found!')
+        w = w[0]
+
+        dhip['S_N'] = float(local_catalog['snrPMaH2EG3a'].data[w]) # SNR hip - HipeDR3
+        dhip['PMa_ra'] = float(local_catalog['PMaRAH2EG3a'].data[w]) # PMa Right Ascension hip - HipeDR3
+        dhip['PMa_ra_err'] = float(local_catalog['e_PMaRAH2EG3a'].data[w]) # PMa Right Ascension err hip - HipeDR3
+        dhip['PMa_dec'] = float(local_catalog['PMaDEH2EG3a'].data[w]) # PMa Dec hip - HipeDR3
+        dhip['PMa_dec_err'] = float(local_catalog['e_PMaDEH2EG3a'].data[w]) # PMa Dec err hip - HipeDR3
+
+        # Get eDR3 data
+        dgaia['S_N'] = float(local_catalog['snrPMaH2EG3b'].data[w]) # SNR eDR3 - HipeDR3
+        dgaia['PMa_ra'] = float(local_catalog['PMaRAH2EG3b'].data[w]) # PMa Right Ascension eDR3 - HipeDR3
+        dgaia['PMa_ra_err'] = float(local_catalog['e_PMaRAH2EG3b'].data[w]) # PMa Right Ascension err eDR3 - HipeDR3
+        dgaia['PMa_dec'] = float(local_catalog['PMaDEH2EG3b'].data[w]) # PMa Dec eDR3 - HipeDR3
+        dgaia['PMa_dec_err'] = float(local_catalog['e_PMaDEH2EG3b'].data[w]) # PMa Dec err eDR3 - HipeDR3
+
+        # Get star info
+        dparams['parallax'] = float(local_catalog['PlxG3'].data[w]) # mas
+        dparams['dpc'] = 1./(dparams['parallax']*1.0e-3)
+        dparams['mstar'] = float(local_catalog['M1'].data[w])
+
+        # Add geometry info to star info
+        dparams['PA'] = self.geometry['PA']
+        dparams['PA_err'] = self.geometry['PA_err']
+        dparams['inc'] = self.geometry['inc']
+        dparams['inc_err'] = self.geometry['inc_err']
+
+        return dhip, dgaia, dparams
+    
