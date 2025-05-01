@@ -4,7 +4,9 @@ Code to plot the Proper Motion anomaly (PMa) of any star in the <a href="https:/
 
 An example of how to use the code is given in `example/PMa_example.py` with the potential kwargs that can be given to the different functions.
 
-##### Important
+#### Important
+**Stars are queried in the format "HIP XXXX"**
+
 - [_self.data_](./ExePMa/circular_PMa.py): DataFrame with queried PMa information from Gaia eDR3 and Hipparcos + any geometry information given for the system  
 - [_plot_pma(ax, epoch=['eDR3' or 'Hipparcos'])_](./ExePMa/plotting.py): Returns ax where the specifc PMa curve is plotted  
 - [_plot_disc_extent(ax, discdata)_](./ExePMa/plotting.py): Returns ax where the disc extent is plotted as well as a Hill radius argument for the stability of the inner edge location.
