@@ -38,6 +38,7 @@ class Plotting():
         alpha = plotting_params.get('alpha', 0.1)
         min_x = plotting_params.get('min_x', None)
         max_x = plotting_params.get('max_x', None)
+        pma_label = plotting_params.get('label', f'{epoch} PMa')
 
         pma_data = self.mass_retrieval(epoch=epoch, **kwargs)
 
@@ -61,7 +62,7 @@ class Plotting():
             pass
 
         if self.data[epoch]['S_N'][0] >= snr:
-            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
+            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=pma_label) # mean ms value
             ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
             ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
             ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma

@@ -163,3 +163,4 @@ cython_debug/
 
 # Xtra
 .DS_Store
+example/test/
