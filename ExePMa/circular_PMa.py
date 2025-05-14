@@ -139,10 +139,10 @@ class PMa(Database, Plotting):
         """
 
         eta = self.eta(PA_PMa, inc, PA)
-        periods = self.period(rs, m=self.data['params']['mstar'][0]) # years        
+        periods = self.period(rs, m=self.data['params'].iloc[0]['mstar']) # years        
         zeta = self.calculate_zeta(P=periods, epoch=epoch, known_inc=know_inc, inc=inc, Nrandom=Nrandom)
 
-        const = np.sqrt(self.data['params']['mstar'][0] * self.M_SUN / self.G)
+        const = np.sqrt(self.data['params'].iloc[0]['mstar'] * self.M_SUN / self.G)
         r_term = const * np.sqrt(rs * self.AU) / self.gamma(periods/(self.EPOCHS_DT[epoch] / self.YEAR))
         corr_vel = v / eta
 
@@ -155,22 +155,22 @@ class PMa(Database, Plotting):
         rs [au], PMa [mas], parallax [mas], inc [deg], PA [deg], mstar [Msun], default gaia is 'eDR3'
         returns ±1,2,3 sigma and mean of m2 at the given rs
         """
-        PMa_ras = np.random.normal(data[epoch]['PMa_ra'][0], data[epoch]['PMa_ra_err'][0], Nrandom)
-        PMa_decs=np.random.normal(data[epoch]['PMa_dec'][0], data[epoch]['PMa_dec_err'][0], Nrandom)
+        PMa_ras = np.random.normal(data[epoch].iloc[0]['PMa_ra'], data[epoch].iloc[0]['PMa_ra_err'], Nrandom)
+        PMa_decs=np.random.normal(data[epoch].iloc[0]['PMa_dec'], data[epoch].iloc[0]['PMa_dec_err'], Nrandom)
 
-        if data['params']['inc'][0] is None:
+        if data['params'].iloc[0]['inc'] is None:
             print('unknown system inc')
             know_inc = False
             incs=np.arccos(np.random.uniform(0.0, 1.0, Nrandom))*180/np.pi 
         else:
-            incs=np.random.normal(data['params']['inc'][0], data['params']['inc_err'][0], Nrandom)
+            incs=np.random.normal(data['params'].iloc[0]['inc'], data['params'].iloc[0]['inc_err'], Nrandom)
             know_inc = True
 
-        if data['params']['PA'][0] is None:
+        if data['params'].iloc[0]['PA'] is None:
             print('unknown system PA')
             PAs=np.random.uniform(0.0, 180.0, Nrandom)
         else:
-            PAs=np.random.normal(data['params']['PA'][0], data['params']['PA_err'][0], Nrandom)
+            PAs=np.random.normal(data['params'].iloc[0]['PA'], data['params'].iloc[0]['PA_err'], Nrandom)
 
         msMC = np.zeros((len(rs), Nrandom))
         ms = np.zeros((len(rs), 7)) # ±1,2,3 sigma + mean
@@ -178,7 +178,7 @@ class PMa(Database, Plotting):
         PAs_PMa = np.zeros(Nrandom)
 
         ### MC
-        v_ = np.sqrt(PMa_ras**2. + PMa_decs**2.) / data['params']['parallax'][0] *4740.470 # m/s        
+        v_ = np.sqrt(PMa_ras**2. + PMa_decs**2.) / data['params'].iloc[0]['parallax'] *4740.470 # m/s        
         PAs_PMa[:] = np.arctan2(PMa_ras, PMa_decs)*180./np.pi # deg
 
         msMC = self.m2(rs=rs, v=v_, PA_PMa=PAs_PMa, epoch=epoch, inc=incs, PA=PAs, know_inc=know_inc, Nrandom=Nrandom)
