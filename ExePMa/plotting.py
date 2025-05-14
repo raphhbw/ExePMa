@@ -119,11 +119,11 @@ class Plotting():
         NRhill = discdata.get('NRhill', 3.0)
 
         # Plot disc edges
-        ax.axvline(r_in, color='grey', ls='--', lw=1.)
-        ax.axvline(r_out, color='grey', ls='--', lw=1.)
+        ax.axvline(r_in, color='grey', ls='--', lw=1., zorder=1)
+        ax.axvline(r_out, color='grey', ls='--', lw=1., zorder=1)
         
         Mpldisc=np.ones_like(aps)*1.0e-2
-        Mpldisc[aps<r_in]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
-        Mpldisc[aps>r_out]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
-        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc')
+        Mpldisc[aps<r_in]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
+        Mpldisc[aps>r_out]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
+        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3 RHill', zorder=1)
         return ax
