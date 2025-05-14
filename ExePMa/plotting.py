@@ -59,8 +59,8 @@ class Plotting():
             ms = ms[mask]
         else: #min_x and max_x are None
             pass
-
-        if self.data[epoch]['S_N'][0] >= snr:
+        # Plot the PMa curve
+        if self.data[epoch].iloc[0]['S_N'] >= snr:
             ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
             ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
             ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
