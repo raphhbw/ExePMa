@@ -38,6 +38,7 @@ class Plotting():
         alpha = plotting_params.get('alpha', 0.1)
         min_x = plotting_params.get('min_x', None)
         max_x = plotting_params.get('max_x', None)
+        pma_label = plotting_params.get('label', f'{epoch} PMa')
 
         pma_data = self.mass_retrieval(epoch=epoch, **kwargs)
 
