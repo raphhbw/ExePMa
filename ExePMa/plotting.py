@@ -60,9 +60,9 @@ class Plotting():
             ms = ms[mask]
         else: #min_x and max_x are None
             pass
-
-        if self.data[epoch]['S_N'][0] >= snr:
-            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=pma_label) # mean ms value
+        # Plot the PMa curve
+        if self.data[epoch].iloc[0]['S_N'] >= snr:
+            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
             ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
             ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
             ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma
@@ -120,11 +120,24 @@ class Plotting():
         NRhill = discdata.get('NRhill', 3.0)
 
         # Plot disc edges
-        ax.axvline(r_in, color='grey', ls='--', lw=1.)
-        ax.axvline(r_out, color='grey', ls='--', lw=1.)
+        ax.axvline(r_in, color='grey', ls='--', lw=1., zorder=1)
+        ax.axvline(r_out, color='grey', ls='--', lw=1., zorder=1)
         
         Mpldisc=np.ones_like(aps)*1.0e-2
-        Mpldisc[aps<r_in]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
-        Mpldisc[aps>r_out]=np.maximum(3/NRhill**3 *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
-        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc')
+        Mpldisc[aps<r_in]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
+        Mpldisc[aps>r_out]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
+        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3 RHill', zorder=1)
+        return ax
+    
+    def ruwe_cutoff(self, ax, dpc, mstar):
+        ''' Plot ruwe cutoff based on Limbach+2024 and Kiefer+2024 (paperI) '''
+        ap_gaia = ((1038*24*3600/(2*np.pi))**2 * self.G * mstar*self.M_SUN)**(1/3) / self.AU #1038 days from Gaia into au
+        mp_gaia_cutoff = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ap_gaia
+
+        ruwe_aps = np.linspace(0.1, 20, 300)
+
+        inner_mps = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ruwe_aps
+        outer_mps = ruwe_aps**2 -ap_gaia**2 + mp_gaia_cutoff
+
+        ax.fill_between(ruwe_aps, np.maximum(inner_mps, outer_mps), np.ones(len(ruwe_aps))*1.0e3, color='grey', alpha=0.2, hatch='..', zorder=1, linestyle='--', edgecolor='k', label='RUWE cut')
         return ax
