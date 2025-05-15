@@ -5,11 +5,15 @@ Code to plot the Proper Motion anomaly (PMa) of any star in the <a href="https:/
 An example of how to use the code is given in `example/PMa_example.py` with the potential kwargs that can be given to the different functions.
 
 #### Important
-**Stars are queried in the format "HIP XXXX"**
+Query can be made:
+- star: Name of your target that will be serached through Simbad to get the HIP numbers
+- hip: You can bypass the Simbad query by specifying HIP number, e.g. hip= 'HIP XXXX'
 
+Useful features:
 - [_self.data_](./ExePMa/circular_PMa.py): DataFrame with queried PMa information from Gaia eDR3 and Hipparcos + any geometry information given for the system  
 - [_plot_pma(ax, epoch=['eDR3' or 'Hipparcos'])_](./ExePMa/plotting.py): Returns ax where the specifc PMa curve is plotted  
-- [_plot_disc_extent(ax, discdata)_](./ExePMa/plotting.py): Returns ax where the disc extent is plotted as well as a Hill radius argument for the stability of the inner edge location.
+- [_plot_disc_extent(ax, aps, discdata, mstar)_](./ExePMa/plotting.py): Returns ax where the disc extent is plotted as well as a Hill radius argument for the stability of the inner edge location.
+- [_ruwe_cutoff(ax, dpc, mstar, ruwe)_](./ExePMa/plotting.py): Returns ax where specific planet parameters can be ruled out based on RUWE (following Limbach+2024, Kiefer+2024)
 
 ##### Requirements
 Requirements are listed in [_requirements.txt_](requirements.txt).
