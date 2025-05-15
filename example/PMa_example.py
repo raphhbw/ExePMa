@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # plt.style.use('~/matplotlib_styles/images_inv.mplstyle')
 
 ## System information
-star = 'HD92945'
+star = 'HD 92945'
 
 # Geometry
 # {"inc": value [default None],
@@ -66,6 +66,9 @@ ax.text(30, 0.6, star, color='k', fontsize=10)
 # Needed to calculate RHill. Could change manually.
 mstar = GetPMa.data["params"]["mstar"][0]
 ax = GetPMa.plot_disc_extent(ax=ax, aps=aps, discdata=disc_data, mstar=mstar)
+
+# Add RUWE cut
+ax = GetPMa.ruwe_cutoff(ax, dpc=GetPMa.data['params'].iloc[0]['dpc'], mstar=GetPMa.data['params'].iloc[0]['mstar'], ruwe=GetPMa.data['params'].iloc[0]['ruwe'])
 
 plt.tight_layout()
 plt.show()

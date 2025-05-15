@@ -129,15 +129,19 @@ class Plotting():
         ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3 RHill', zorder=1)
         return ax
     
-    def ruwe_cutoff(self, ax, dpc, mstar):
+    def ruwe_cutoff(self, ax, dpc, mstar, ruwe):
         ''' Plot ruwe cutoff based on Limbach+2024 and Kiefer+2024 (paperI) '''
-        ap_gaia = ((1038*24*3600/(2*np.pi))**2 * self.G * mstar*self.M_SUN)**(1/3) / self.AU #1038 days from Gaia into au
-        mp_gaia_cutoff = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ap_gaia
 
-        ruwe_aps = np.linspace(0.1, 20, 300)
+        if ruwe < 1.4:
+            ap_gaia = ((1038*24*3600/(2*np.pi))**2 * self.G * mstar*self.M_SUN)**(1/3) / self.AU #1038 days from Gaia into au
+            mp_gaia_cutoff = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ap_gaia
 
-        inner_mps = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ruwe_aps
-        outer_mps = ruwe_aps**2 -ap_gaia**2 + mp_gaia_cutoff
+            ruwe_aps = np.linspace(0.1, 20, 300)
 
-        ax.fill_between(ruwe_aps, np.maximum(inner_mps, outer_mps), np.ones(len(ruwe_aps))*1.0e3, color='grey', alpha=0.2, hatch='..', zorder=1, linestyle='--', edgecolor='k', label='RUWE cut')
-        return ax
+            inner_mps = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ruwe_aps
+            outer_mps = ruwe_aps**2 -ap_gaia**2 + mp_gaia_cutoff
+
+            ax.fill_between(ruwe_aps, np.maximum(inner_mps, outer_mps), np.ones(len(ruwe_aps))*1.0e3, color='grey', alpha=0.2, hatch='..', zorder=1, linestyle='--', edgecolor='k', label='RUWE cut')
+            return ax
+        else:
+            return print(f'RUWE > 1.4 ({ruwe}), no cut applied')

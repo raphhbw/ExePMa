@@ -1,18 +1,28 @@
 import pandas as pd
 from astroquery.vizier import Vizier
+from astroquery.simbad import Simbad
 import astropy.units as u
 import numpy as np
 
 class Database():
     V_EDR3 = Vizier(columns=["**"], catalog="J/A+A/657/A7") # Kervella+22 Vizier Catalog
 
-    def __init__(self, star, **kwargs):
+    def __init__(self, **kwargs):
         """ Potential kwargs:
             - gaia [default:'eDR3']: gaia epoch required from the Vizier catalogs
             - geometry [default: {}]: geometry info about the system. """
-        self.star = star
+        self.star = kwargs.get("star", None)
+        self.hip = kwargs.get("hip", None)
+
+        if self.star is None and self.hip is None:
+            raise ValueError("Please provide either a star name (star) or a Hipparcos number (hip).")
+        elif self.hip is None:
+            self.hip = self.get_hip_number(self.star)
+
         self.geometry = self.build_geometryinfo(kwargs.get("geometry", {}))
+
         self.gaia = kwargs.get("gaia", 'eDR3')
+        self.mstar = kwargs.get("mstar", None)
 
         self.data = self.get_data(self.gaia)
 
@@ -25,6 +35,29 @@ class Database():
                 "PA":discinfo.get('PA', None), # default None if no PA is given
                 "PA_err":discinfo.get('PA_err', 1.0), # default 1.0 if no PA_err is given [TODO: check default]
                 }
+    
+    def get_hip_number(self, star_name):
+        # Customize Simbad to include the HIP identifier in the results
+        custom_simbad = Simbad()
+        custom_simbad.TIMEOUT = 10  # Set a timeout for the query
+        custom_simbad.add_votable_fields('ids')  # Include identifiers in the query
+
+        # Query SIMBAD for the star
+        result = custom_simbad.query_object(star_name)
+        
+        if result is None:
+            raise ValueError(f"Star '{star_name}' not found in SIMBAD.")
+        elif len(result)>1:
+            raise ValueError(f"Multiple entries found for star '{star_name}'. Please specify further.")
+
+        # Extract the HIP number from the identifiers
+        identifiers = result['IDS'][0]
+        for identifier in identifiers.split('|'):
+            if identifier.strip().startswith('HIP'):
+                print(f"The HIP number of {star_name} is: {identifier.strip()}")
+                return identifier.strip()
+        
+        return f"HIP number not found for star '{star_name}'."
 
     def vizier_query(self, gaia):
         """ Query Vizier catalog for Kervella PMa information. 
@@ -32,13 +65,13 @@ class Database():
             Returns: info for hip, info for gaia, info on star """
         
         # Initialise the dictionaries
-        dhip = {'star':[self.star]}
-        dgaia = {'star':[self.star]}
-        dparams = {'star':[self.star]}
+        dhip = {'star':[self.hip]}
+        dgaia = {'star':[self.hip]}
+        dparams = {'star':[self.hip]}
 
         if gaia == 'eDR3':
             # Query catalog
-            results = self.V_EDR3.query_object(self.star, radius=1*u.arcmin)
+            results = self.V_EDR3.query_object(self.hip, radius=1*u.arcmin)
             query_okay = True
             if len(results) == 0:
                 query_okay = False
@@ -46,10 +79,10 @@ class Database():
                 query_okay = False
             
             if query_okay == False:
-                results = self.V_EDR3.query_object(self.star, radius=1*u.deg)
+                results = self.V_EDR3.query_object(self.hip, radius=1*u.deg)
                 
             # Get Hip data
-            hip_name = int(self.star.replace('HIP ',''))
+            hip_name = int(self.hip.replace('HIP ',''))
             query_hip_names = np.array(results[0]['HIP'])
             
             w, = np.where(query_hip_names == hip_name)
@@ -73,7 +106,11 @@ class Database():
             # Get star info
             dparams['parallax'] = results[0]['PlxG3'].data[w] # mas
             dparams['dpc'] = 1./(dparams['parallax']*1.0e-3)
-            dparams['mstar'] = results[0]['M1'].data[w]
+            dparams['ruwe'] = results[0]['RUWE'].data[w] # RUWE
+            if self.mstar is None:
+                dparams['mstar'] = results[0]['M1'].data[w]
+            else:
+                dparams['mstar'] = self.mstar
 
             # Add geometry info to star info
             dparams['PA'] = self.geometry['PA']

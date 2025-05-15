@@ -16,10 +16,10 @@ class PMa(Database, Plotting):
     EPOCHS_DT = {"DR2":668., "eDR3":1038., "Hipparcos":1227.} # days
     EPOCHS_DT_HG = {"DR2":24.25, "eDR3":24.75} # years
 
-    def __init__(self, star, **kwargs):
+    def __init__(self, **kwargs):
 
         ### Get all information from Vizier catalog
-        Database.__init__(self, star, **kwargs) # creating data DataFrame
+        Database.__init__(self, **kwargs) # creating data DataFrame
         print(self.data)
         print('-----------------')
 
