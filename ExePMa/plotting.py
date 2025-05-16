@@ -98,12 +98,12 @@ class Plotting():
         secax.set_xlabel(r'$a_{\rm p}$ [arcsec]')
         return ax
     
-    def plot_disc_extent(self, ax, aps, discdata, mstar, **kwargs):
+    def plot_disc_extent(self, ax, aps, discdata, mstar, plot_lines=False, **kwargs):
         """ Plot the disc extent + rhill argument for edge truncation.
             Kwargs options:
                 - plotting_params [dict]:
                     - disc_color [default: C1]: colour given to the disc
-                    - disc_alpha [default 0.4]
+                    - disc_alpha [default 0.3]
                 - discdata [dict]:
                     - r_in: inner edge location in au
                     - r_out: outer edge location in au
@@ -113,20 +113,63 @@ class Plotting():
         plotting_params = kwargs.get('plotting_params', {})
         # default values if not in plotting_params
         disc_color = plotting_params.get('disc_color', 'C1')
-        disc_alpha = plotting_params.get('disc_alpha', 0.4)
+        disc_alpha = plotting_params.get('disc_alpha', 0.3)
 
         r_in = discdata.get('r_in')
         r_out = discdata.get('r_out')
         NRhill = discdata.get('NRhill', 3.0)
+        gaps = discdata.get('gaps', 0)
+        gaps_in = discdata.get('gaps_in', None)
+        gaps_out = discdata.get('gaps_out', None)
 
-        # Plot disc edges
-        ax.axvline(r_in, color='grey', ls='--', lw=1., zorder=1)
-        ax.axvline(r_out, color='grey', ls='--', lw=1., zorder=1)
+        disc_extent = [r_in, r_out]
         
-        Mpldisc=np.ones_like(aps)*1.0e-2
-        Mpldisc[aps<r_in]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps[aps<r_in] -1.) )**(3.), Mpldisc[aps<r_in])
-        Mpldisc[aps>r_out]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( ( 1.-r_out/aps[aps>r_out]))**(3.),Mpldisc[aps>r_out])
-        ax.fill_between(aps, Mpldisc, np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3 RHill', zorder=1)
+        if gaps_in is None:
+            if gaps > 0:
+                raise ValueError('gaps_in values for the disc not provided')
+        else:
+            if len(gaps_in) != gaps:
+                raise ValueError('Review gaps_in values for the disc, not equal to gaps')
+            else:
+                disc_extent = np.concatenate((disc_extent, gaps_in))
+        
+        if gaps_out is None:
+            if gaps > 0:
+                raise ValueError('gaps_out values for the disc not provided')
+        else:
+            if len(gaps_out) != gaps:
+                raise ValueError('Review gaps_out values for the disc, not equal to gaps')
+            else:
+                disc_extent = np.concatenate((disc_extent, gaps_out))
+
+        # reorder disc extent
+        disc_extent = np.sort(disc_extent)
+
+        Mpldisc = np.ones((gaps+1, len(aps))) * 1.0e-2
+
+        for i in range(gaps+1):
+            j = i+i
+            rin_i = disc_extent[j]
+            rout_i = disc_extent[j+1]
+
+            # Plot edges
+            ax.axvline(rin_i, color='grey', ls='--', lw=1., zorder=1)
+            ax.axvline(rout_i, color='grey', ls='--', lw=1., zorder=1)
+
+            Mpldisc_i = Mpldisc[i,:]
+            Mpldisc_i[aps<rin_i]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (rin_i/aps[aps<rin_i] -1.) )**(3.), Mpldisc_i[aps<rin_i])
+            Mpldisc_i[aps>rout_i]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( ( 1.-rout_i/aps[aps>rout_i]))**(3.),Mpldisc_i[aps>rout_i])
+            if plot_lines:
+                ax.plot(aps, 3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (rin_i/aps -1.) )**(3.))
+                ax.plot(aps, 3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( ( 1.-rout_i/aps))**(3.))
+
+            Mpldisc[i,:] = Mpldisc_i
+
+        if gaps == 0:
+            ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3R$_\mathrm{Hill}$', zorder=1)
+        else:
+            ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3R$_\mathrm{Hill}$', zorder=1)
+
         return ax
     
     def ruwe_cutoff(self, ax, dpc, mstar, ruwe):
