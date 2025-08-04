@@ -182,9 +182,12 @@ class Plotting():
             ruwe_aps = np.linspace(0.1, 20, 300)
 
             inner_mps = 2*np.sqrt(2*np.log(2))*0.19e-3 * dpc * mstar*self.M_SUN/self.M_JUP/ruwe_aps
-            outer_mps = ruwe_aps**2 -ap_gaia**2 + mp_gaia_cutoff
+            b = np.log10(mp_gaia_cutoff)-2*np.log10(ap_gaia)
+
+            outer_mps = 10**(2*np.log10(ruwe_aps) + b)
 
             ax.fill_between(ruwe_aps, np.maximum(inner_mps, outer_mps), np.ones(len(ruwe_aps))*1.0e3, color='grey', alpha=0.2, hatch='..', zorder=1, linestyle='--', edgecolor='k', label='RUWE cut')
             return ax
         else:
-            return print(f'RUWE > 1.4 ({ruwe}), no cut applied')
+            print(f'RUWE > 1.4 ({ruwe}), no cut applied')
+            return ax
