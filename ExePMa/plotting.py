@@ -108,6 +108,9 @@ class Plotting():
                     - r_in: inner edge location in au
                     - r_out: outer edge location in au
                     - NRhill [default 3.0]: number of hill radii 
+                    - gaps [default 0]: number of gaps in the disc
+                    - gaps_in [default None]: inner gaps in the disc (as a list), if gaps > 0
+                    - gaps_out [default None]: outer gaps in the disc (as a list), if gaps > 0
         """
         # read in any plotting kwargs params
         plotting_params = kwargs.get('plotting_params', {})

@@ -17,7 +17,10 @@ geometry = {"inc": 30.,
 # Disc information
 # {"r_in": value, Requires value
 #  "r_out": value, Requires value
-#  "NRhill": value [default 3.0]}
+#  "NRhill": value [default 3.0],
+#  "gaps": value [default 0],
+#  "gaps_in": list [default None],
+#  "gaps_out": list [default None]}
 disc_data = {"r_in":45,
              "r_out":120}
 
