@@ -3,13 +3,14 @@ from ExePMa import circular_PMa
 import matplotlib.pyplot as plt
 
 ## System information
-star = 'HIP544'
+star = 'HD 107146'
 
 ## PMa parameters
 pma_params = {"savelog": False}
 
 ## Plotting parameters
-plotting_params = {"snr": 3.0} # significance in sigma
+plotting_params = {"snr": 3.0,
+                   "upper_limit": False} # significance in sigma
 
 ### Initialise main PMa function
 GetPMa = circular_PMa.PMa(star=star)

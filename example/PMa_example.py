@@ -22,7 +22,8 @@ geometry = {"inc": 30.,
 #  "gaps_in": list [default None],
 #  "gaps_out": list [default None]}
 disc_data = {"r_in":45,
-             "r_out":120}
+             "r_out":120,
+             "gaps": 0}
 
 ## PMa parameters
 # {"Na": value [default 300],

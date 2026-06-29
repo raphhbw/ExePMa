@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 class Plotting():
     ### units
@@ -114,6 +115,7 @@ class Plotting():
         """
         # read in any plotting kwargs params
         plotting_params = kwargs.get('plotting_params', {})
+
         # default values if not in plotting_params
         disc_color = plotting_params.get('disc_color', 'C1')
         disc_alpha = plotting_params.get('disc_alpha', 0.3)
@@ -169,10 +171,57 @@ class Plotting():
             Mpldisc[i,:] = Mpldisc_i
 
         if gaps == 0:
-            ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3R$_\mathrm{Hill}$', zorder=1)
+            ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
+                            label='Disc 3R$_\mathrm{Hill}$',
+                            zorder=1)
         else:
-            ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//', label='Disc 3R$_\mathrm{Hill}$', zorder=1)
+            # for i in range(gaps):
+            #     gap_rin = disc_extent[2*i+1]
+            #     gap_rout = disc_extent[2*i+2]
+            #     mask = (aps >= gap_rin) & (aps <= gap_rout)
+            #     Mpldisc[:, mask] = 1e3
 
+            ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
+                            label='Disc 3R$_\mathrm{Hill}$',
+                            zorder=1)
+
+        return ax
+
+    def single_planet_inner_edge_sculptor(self, ax, aps, discdata, mstar, min_mp, **kwargs):
+        plotting_params = kwargs.get('plotting_params', {})
+        line_color = plotting_params.get('line_color', 'r')
+        alpha = plotting_params.get('alpha', 0.5)
+        label = plotting_params.get('label', 'Inner edge sculptor')
+
+        r_in = discdata.get('r_in')
+        NRhill = discdata.get('NRhill', 3.0)
+
+        ap_err = kwargs.get('ap_err', None)
+        min_mp_multiple = kwargs.get('min_mp_multiple', None)
+        mp_err = kwargs.get('mp_err', 1)
+
+        if min_mp is not None:
+            mps = 3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (r_in/aps -1.) )**(3.)
+            cond = (mps >= min_mp)
+            if ap_err is None:
+                ax.plot(aps[cond], mps[cond], color=line_color, alpha=alpha, ls='-', lw=2., zorder=1, label=label)
+            else:
+                ax.fill_betweenx(mps[cond], aps[cond] - ap_err, aps[cond] + ap_err, alpha=alpha, color=line_color, zorder=1, label=label)
+
+        if min_mp_multiple is not None:
+            f_aplt = interp1d(mps, aps, fill_value='extrapolate')
+            ax.errorbar(f_aplt(min_mp_multiple), min_mp_multiple, xerr=ap_err, yerr=mp_err, fmt='o', markersize=5, mec='black', color='darkorange', label=r'min m$_p$ (multiple planets)')
+        
+        return ax
+
+    def plot_diffusion(self, ax, aps, discdata, mstar, age):
+        """ Plot the diffusion timescale argument for inner edge truncation.
+        """
+        r_in = discdata.get('r_in')
+
+        diff = 0.331*aps*r_in**(-1/4)*age**(-1/2)*mstar**(3/4) # Eq 7 Pearce2022
+
+        ax.plot(aps, diff, color='r', ls='--', lw=1., zorder=1, label=r'Diffusion timescale')
         return ax
     
     def ruwe_cutoff(self, ax, dpc, mstar, ruwe):
