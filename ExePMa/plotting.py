@@ -70,6 +70,7 @@ class Plotting():
         else: # upper limits when significance < snr
             if upper_limit:
                 ax.plot(aps, ms[:,6], color=color[0] if epoch=='Hipparcos' else color[1], label=f'Upper limit {epoch} PMa')
+                ax.fill_between(aps, ms[:,6], np.ones_like(aps)*1.0e3, color=color[0] if epoch=='Hipparcos' else color[1], alpha=0.3, hatch='//')
 
         return ax, aps
     
@@ -119,6 +120,7 @@ class Plotting():
         # default values if not in plotting_params
         disc_color = plotting_params.get('disc_color', 'C1')
         disc_alpha = plotting_params.get('disc_alpha', 0.3)
+        disc_zorder = plotting_params.get('disc_zorder', 1)
 
         r_in = discdata.get('r_in')
         r_out = discdata.get('r_out')
@@ -158,8 +160,8 @@ class Plotting():
             rout_i = disc_extent[j+1]
 
             # Plot edges
-            ax.axvline(rin_i, color='grey', ls='--', lw=1., zorder=1)
-            ax.axvline(rout_i, color='grey', ls='--', lw=1., zorder=1)
+            ax.axvline(rin_i, color='grey', ls='--', lw=1., zorder=disc_zorder)
+            ax.axvline(rout_i, color='grey', ls='--', lw=1., zorder=disc_zorder)
 
             Mpldisc_i = Mpldisc[i,:]
             Mpldisc_i[aps<rin_i]=np.maximum(3/(NRhill**3) *mstar*self.M_SUN/self.M_JUP * ( (rin_i/aps[aps<rin_i] -1.) )**(3.), Mpldisc_i[aps<rin_i])
@@ -173,7 +175,7 @@ class Plotting():
         if gaps == 0:
             ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
                             label='Disc 3R$_\mathrm{Hill}$',
-                            zorder=1)
+                            zorder=disc_zorder)
         else:
             # for i in range(gaps):
             #     gap_rin = disc_extent[2*i+1]
@@ -183,13 +185,14 @@ class Plotting():
 
             ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
                             label='Disc 3R$_\mathrm{Hill}$',
-                            zorder=1)
+                            zorder=disc_zorder)
 
         return ax
 
     def single_planet_inner_edge_sculptor(self, ax, aps, discdata, mstar, min_mp, **kwargs):
         plotting_params = kwargs.get('plotting_params', {})
         line_color = plotting_params.get('line_color', 'r')
+        multi_mp_color = plotting_params.get('multi_mp_color', 'darkorange')
         alpha = plotting_params.get('alpha', 0.5)
         label = plotting_params.get('label', 'Inner edge sculptor')
 
@@ -210,7 +213,7 @@ class Plotting():
 
         if min_mp_multiple is not None:
             f_aplt = interp1d(mps, aps, fill_value='extrapolate')
-            ax.errorbar(f_aplt(min_mp_multiple), min_mp_multiple, xerr=ap_err, yerr=mp_err, fmt='o', markersize=5, mec='black', color='darkorange', label=r'min m$_p$ (multiple planets)')
+            ax.errorbar(f_aplt(min_mp_multiple), min_mp_multiple, xerr=ap_err, yerr=mp_err, fmt='o', markersize=5, mec='black', color=multi_mp_color, label=r'min m$_{plt}$ (multiple planets)')
         
         return ax
 
