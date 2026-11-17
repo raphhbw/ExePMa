@@ -9,8 +9,13 @@ class Database():
 
     def __init__(self, **kwargs):
         """ Potential kwargs:
+            - star: star name (resolved to a HIP number via SIMBAD). Either star or hip is required.
+            - hip: Hipparcos identifier, e.g. 'HIP 12345'. Either star or hip is required.
             - gaia [default:'eDR3']: gaia epoch required from the Vizier catalogs
-            - geometry [default: {}]: geometry info about the system. """
+            - geometry [default: {}]: geometry info about the system.
+            - mstar [default: None]: stellar mass [Msun] overriding the catalog value (M1).
+            - local_catalog [default: None]: local copy of the Kervella+22 table (e.g. astropy Table).
+              If given, data is read from it instead of querying Vizier. """
         self.star = kwargs.get("star", None)
         self.hip = kwargs.get("hip", None)
 
@@ -24,7 +29,7 @@ class Database():
         self.gaia = kwargs.get("gaia", 'eDR3')
         self.mstar = kwargs.get("mstar", None)
 
-        self.data = self.get_data(self.gaia)
+        self.data = self.get_data(self.gaia, kwargs.get("local_catalog", None))
 
     def build_geometryinfo(self, discinfo):
         """ Build dictionary with geometry info 
@@ -125,11 +130,14 @@ class Database():
 
         return dhip, dgaia, dparams
     
-    def get_data(self, gaia):
+    def get_data(self, gaia, local_catalog=None):
         d = {}
         
-        # Query data from Kervella vizier catalog
-        dhip, dgaia, dparams = self.vizier_query(gaia)
+        # Query data from Kervella vizier catalog, or read it from a local copy
+        if local_catalog is None:
+            dhip, dgaia, dparams = self.vizier_query(gaia)
+        else:
+            dhip, dgaia, dparams = self.create_single_star_table(local_catalog)
 
         d['Hipparcos'] = pd.DataFrame(data=dhip).set_index('star')
         d[gaia] = pd.DataFrame(data=dgaia).set_index('star')
@@ -138,15 +146,16 @@ class Database():
         return pd.concat(d, axis=1)
 
     def create_single_star_table(self, local_catalog):
+        """ Same output as vizier_query, but read from a local copy of the Kervella+22 catalog (eDR3 only). """
 
-        dhip = {'star':[self.star]}
-        dgaia = {'star':[self.star]}
-        dparams = {'star':[self.star]}
+        dhip = {'star':[self.hip]}
+        dgaia = {'star':[self.hip]}
+        dparams = {'star':[self.hip]}
         
         hip_names = np.array([f'HIP {i}' for i in local_catalog['HIP']])
-        w, = np.where(hip_names == self.star)
+        w, = np.where(hip_names == self.hip)
         if len(w) == 0:
-            raise ValueError(f'Star {self.star} was not found!')
+            raise ValueError(f'Star {self.hip} was not found in the local catalog!')
         w = w[0]
 
         dhip['S_N'] = float(local_catalog['snrPMaH2EG3a'].data[w]) # SNR hip - HipeDR3
@@ -165,7 +174,8 @@ class Database():
         # Get star info
         dparams['parallax'] = float(local_catalog['PlxG3'].data[w]) # mas
         dparams['dpc'] = 1./(dparams['parallax']*1.0e-3)
-        dparams['mstar'] = float(local_catalog['M1'].data[w])
+        dparams['ruwe'] = float(local_catalog['RUWE'].data[w]) if 'RUWE' in local_catalog.colnames else np.nan # RUWE
+        dparams['mstar'] = float(local_catalog['M1'].data[w]) if self.mstar is None else self.mstar
 
         # Add geometry info to star info
         dparams['PA'] = self.geometry['PA']

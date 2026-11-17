@@ -13,23 +13,30 @@ class Plotting():
         pass
 
     def au2arc(self, x):
-        return x / self.data['params']['dpc'][0]
+        return x / self.data['params'].iloc[0]['dpc']
     
     def arc2au(self, x):
-        return x * self.data['params']['dpc'][0]
+        return x * self.data['params'].iloc[0]['dpc']
 
     def plot_pma(self, ax, epoch, **kwargs):
         """ Plotting PMa curve function.
             Choose your epoch [eDR3 or Hipparcos] for your curve. If snr > 3 [default] curve will be plotted. 
             Kwargs:
+                - plot_sigmas [list, default: [1,2,3]]: sigma levels to plot for PMa. Valid values: [1,2,3], [1,2], [1].
                 - plotting_params [dict]:
                     - snr [default: 3.0]: snr determines the strength of the PMa
                     - upper_limit [default: False]: plots upper limit when PMa not significant enough
-                    - min_x, min_y [default None]: mask for aps
+                    - min_x, max_x [default None]: mask for aps (applied after x_scaling)
                     - color [default: [C1, C0]]: colour for Hipparcos, Gaia curves
                     - alpha [default: 0.1]
+                    - label [default: '{epoch} PMa']
+                    - x_scaling [default: 1]: multiplies aps (in au) before plotting, e.g. 1/r_disc to plot
+                      a_p/r_disc. Only the PMa curve is rescaled: disc extent, RUWE cut and axis labels stay
+                      in au, and the top arcsec axis is wrong when x_scaling != 1 (hide it with
+                      upper_label=False, upper_ticks=False and set xlabel in add_axis_info).
                 - pma_params [dict] given to mass_retrieval function
         """
+        pma_levels = kwargs.get('plot_sigmas', [1, 2, 3])
         # read in any plotting kwargs params
         plotting_params = kwargs.get('plotting_params', {})
         # default values if not in plotting_params
@@ -40,10 +47,11 @@ class Plotting():
         min_x = plotting_params.get('min_x', None)
         max_x = plotting_params.get('max_x', None)
         pma_label = plotting_params.get('label', f'{epoch} PMa')
+        x_scaling = plotting_params.get('x_scaling', 1)
 
         pma_data = self.mass_retrieval(epoch=epoch, **kwargs)
 
-        aps = pma_data[:,0]
+        aps = x_scaling * pma_data[:,0]
         ms = pma_data[:,1:]
 
         # Conditions on aps based on min_x and max_x
@@ -65,8 +73,10 @@ class Plotting():
         if self.data[epoch].iloc[0]['S_N'] >= snr:
             ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
             ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
-            ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
-            ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma
+            if 2 in pma_levels:
+                ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
+            if 3 in pma_levels:
+                ax.fill_between(aps, ms[:,0], ms[:,6], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 3sigma
         else: # upper limits when significance < snr
             if upper_limit:
                 ax.plot(aps, ms[:,6], color=color[0] if epoch=='Hipparcos' else color[1], label=f'Upper limit {epoch} PMa')
@@ -80,15 +90,25 @@ class Plotting():
             - plotting_params [dict]:
                 - xlim [default [0.3, 300]]: xlimit with [xmin, xmax]
                 - ylim [default [3.0e-1, 1.0e2]]: ylimit with [ymin, ymax]
+                - xlabel [default r'$a_{\rm p}$ [au]']: bottom x axis label
+                - ylabel [default r'$M_{\rm p}$ [$M_\mathrm{jup}$]']: y axis label
+                - upper_xlabel [default r'$a_{\rm p}$ [arcsec]']: top (arcsec) axis label
+                - upper_label [default True]: show the upper_xlabel on the top axis
+                - upper_ticks [default True]: show ticks on the top (arcsec) axis
         """
         # read in any plotting kwargs params
         plotting_params = kwargs.get('plotting_params', {})
         # default values if not in plotting_params
         xlim = plotting_params.get('xlim', [0.3, 300])
         ylim = plotting_params.get('ylim', [3.0e-1, 1.0e2])
+        xlabel = plotting_params.get('xlabel', r'$a_{\rm p}$ [au]')
+        ylabel = plotting_params.get('ylabel', r'$M_{\rm p}$ [$M_\mathrm{jup}$]')
+        upper_xlabel = plotting_params.get('upper_xlabel', r'$a_{\rm p}$ [arcsec]')
+        show_uplabel = plotting_params.get('upper_label', True)
+        show_upticks = plotting_params.get('upper_ticks', True)
 
-        ax.set_ylabel(r'$M_{\rm p}$ [$M_\mathrm{jup}$]')
-        ax.set_xlabel(r'$a_{\rm p}$ [au]')
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_xlim(xlim[0], xlim[1])
@@ -97,7 +117,11 @@ class Plotting():
 
         ax.tick_params(which='both', top=False)
         secax = ax.secondary_xaxis('top', functions=(self.au2arc, self.arc2au))
-        secax.set_xlabel(r'$a_{\rm p}$ [arcsec]')
+        if show_uplabel:
+            secax.set_xlabel(upper_xlabel)
+        if show_upticks == False:
+            secax.set_xticks([])
+        
         return ax
     
     def plot_disc_extent(self, ax, aps, discdata, mstar, plot_lines=False, **kwargs):
@@ -174,7 +198,7 @@ class Plotting():
 
         if gaps == 0:
             ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
-                            label='Disc 3R$_\mathrm{Hill}$',
+                            label=r'Disc 3R$_\mathrm{Hill}$',
                             zorder=disc_zorder)
         else:
             # for i in range(gaps):
@@ -184,7 +208,7 @@ class Plotting():
             #     Mpldisc[:, mask] = 1e3
 
             ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
-                            label='Disc 3R$_\mathrm{Hill}$',
+                            label=r'Disc 3R$_\mathrm{Hill}$',
                             zorder=disc_zorder)
 
         return ax
