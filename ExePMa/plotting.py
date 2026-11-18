@@ -376,7 +376,7 @@ class Plotting():
     
     def ruwe_cutoff(self, ax, dpc, mstar, ruwe):
         """
-        Plot the region excluded by a low Gaia RUWE (Limbach+2024; Kiefer+2024, paper I).
+        Plot the region excluded by a low Gaia RUWE (Limbach+2024; Kiefer+2025, paper I).
 
         If ruwe < 1.4 the star shows no significant astrometric excess noise, which
         rules out companions producing a large photocentre wobble. For periods shorter
