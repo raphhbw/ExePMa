@@ -9,9 +9,9 @@ star = 'HD 92945'
 
 # Geometry
 # {"inc": value [default None],
-#  "inc_err": value [default None],
+#  "inc_err": value [default 1.0],
 #  "PA": value [default None],
-#  "PA_err": value [default None]}
+#  "PA_err": value [default 1.0]}
 geometry = {"inc": 30.,
             "PA": 20.}
 # Disc information
@@ -45,7 +45,7 @@ pma_params = {"savelog": False}
 #  "ylim": array [default [3.0e-1, 1.0e2]], plt limits
 #  "label": string [default '{epoch} PMa'],
 #  "disc_color": colour [default 'C1'],
-#  "disc_alpha": value [default 0.4]}
+#  "disc_alpha": value [default 0.3]}
 plotting_params = {"snr": 3.0}
 
 ### Initialise main PMa function
@@ -68,11 +68,12 @@ ax = GetPMa.add_axis_info(ax, plotting_params=plotting_params)
 ax.text(30, 0.6, star, color='k', fontsize=10)
 # Add disc inner and outer edges information + planet truncation argument
 # Needed to calculate RHill. Could change manually.
-mstar = GetPMa.data["params"]["mstar"][0]
+mstar = GetPMa.data["params"]["mstar"].iloc[0]
 ax = GetPMa.plot_disc_extent(ax=ax, aps=aps, discdata=disc_data, mstar=mstar)
 
 # Add RUWE cut
-ax = GetPMa.ruwe_cutoff(ax, dpc=GetPMa.data['params'].iloc[0]['dpc'], mstar=GetPMa.data['params'].iloc[0]['mstar'], ruwe=GetPMa.data['params'].iloc[0]['ruwe'])
+params = GetPMa.data['params']
+ax = GetPMa.ruwe_cutoff(ax, dpc=params['dpc'].iloc[0], mstar=params['mstar'].iloc[0], ruwe=params['ruwe'].iloc[0])
 
 plt.tight_layout()
 plt.show()
