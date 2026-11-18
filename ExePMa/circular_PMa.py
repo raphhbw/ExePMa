@@ -175,7 +175,7 @@ class PMa(Database, Plotting):
             vx = -np.sin(M1)
             vy = np.cos(M1)
         else:
-            return NotImplementedError('Wrong epoch chosen')
+            raise ValueError(f"Wrong epoch '{epoch}', must be 'Hipparcos', 'DR2' or 'eDR3'.")
         
         # calculate difference in position between position in Hipparcos and Gaia
         deltar_x = np.cos(M2) - np.cos(M1)
@@ -223,7 +223,7 @@ class PMa(Database, Plotting):
             vx = -np.sin(M1)
             vy = np.cos(M1)
         else:
-            return NotImplementedError('Wrong epoch chosen')
+            raise ValueError(f"Wrong epoch '{epoch}', must be 'Hipparcos', 'DR2' or 'eDR3'.")
 
         deltar_x = np.cos(M2) - np.cos(M1)
         deltar_y = (np.sin(M2) - np.sin(M1)) * cosi
@@ -416,17 +416,18 @@ class PMa(Database, Plotting):
             if not os.path.exists(PMadir):
                 os.makedirs(PMadir)
 
-            ### create filepath for saving PMa info
+            ### create filepath for saving PMa info (star name if given, otherwise HIP identifier)
+            name = self.star if self.star is not None else self.hip
             if self.data['params']['PA'].iloc[0] is None:
                 if self.data['params']['inc'].iloc[0] is None:
-                    file_path = f'PMa_limits_{epoch}_{self.star}_noPA_noInc.txt'
+                    file_path = f'PMa_limits_{epoch}_{name}_noPA_noInc.txt'
                 else:
-                    file_path = f'PMa_limits_{epoch}_{self.star}_noPA.txt'
+                    file_path = f'PMa_limits_{epoch}_{name}_noPA.txt'
             else:
                 if self.data['params']['inc'].iloc[0] is None:
-                    file_path = f'PMa_limits_{epoch}_{self.star}_noInc.txt'
+                    file_path = f'PMa_limits_{epoch}_{name}_noInc.txt'
                 else:
-                    file_path = f'PMa_limits_{epoch}_{self.star}.txt'
+                    file_path = f'PMa_limits_{epoch}_{name}.txt'
 
         ms = self.get_mass_MC(data=self.data, rs=aps, epoch=epoch, Nrandom=Nrandom)  
         saved_ms = np.vstack([aps, ms.T]).T

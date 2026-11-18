@@ -131,6 +131,10 @@ class Database():
         
         raise ValueError(f"HIP number not found for star '{star_name}'.")
 
+    def display_name(self):
+        """Name used in messages: 'HIP 60074 (HD 107146)', or just 'HIP 60074' if no star name was given."""
+        return self.hip if self.star is None else f"{self.hip} ({self.star})"
+
     def vizier_query(self, gaia):
         """
         Query the Kervella+22 catalogue on Vizier for self.hip.
@@ -166,6 +170,8 @@ class Database():
             
             if query_okay == False:
                 results = self.V_EDR3.query_object(self.hip, radius=1*u.deg)
+                if len(results) == 0 or len(results[0]) == 0:
+                    raise ValueError(f"No entries of Kervella's catalog within 1 deg of {self.display_name()}.")
                 
             # Get Hip data
             hip_name = int(self.hip.replace('HIP ',''))
@@ -173,7 +179,7 @@ class Database():
             
             w, = np.where(query_hip_names == hip_name)
             if len(w) == 0:
-                raise ValueError(f"The star {self.star} could not be found in Kervella's catalog. Please do a manual query to understand why.")
+                raise ValueError(f"The star {self.display_name()} could not be found in Kervella's catalog. Please do a manual query to understand why.")
             w = w[0]
             
             dhip['S_N'] = results[0]['snrPMaH2EG3a'].data[w] # SNR hip - HipeDR3
@@ -205,9 +211,9 @@ class Database():
             dparams['inc_err'] = self.geometry['inc_err']
 
         elif gaia == 'DR2':
-            return NotImplementedError('DR2 epoch still needs to be implemented from Kervella+2019')
+            raise NotImplementedError('DR2 epoch still needs to be implemented from Kervella+2019')
         else:
-            return NotImplementedError('Wrong choice of gaia epoch.')
+            raise ValueError(f"Wrong choice of gaia epoch '{gaia}', must be 'eDR3'.")
 
         return dhip, dgaia, dparams
     
@@ -278,7 +284,7 @@ class Database():
         hip_names = np.array([f'HIP {i}' for i in local_catalog['HIP']])
         w, = np.where(hip_names == self.hip)
         if len(w) == 0:
-            raise ValueError(f'Star {self.hip} was not found in the local catalog!')
+            raise ValueError(f'Star {self.display_name()} was not found in the local catalog!')
         w = w[0]
 
         dhip['S_N'] = float(local_catalog['snrPMaH2EG3a'].data[w]) # SNR hip - HipeDR3

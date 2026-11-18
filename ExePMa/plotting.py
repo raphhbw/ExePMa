@@ -102,7 +102,7 @@ class Plotting():
             pass
         # Plot the PMa curve
         if self.data[epoch].iloc[0]['S_N'] >= snr:
-            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=f'{epoch} PMa') # mean ms value
+            ax.plot(aps, ms[:,3], color=color[0] if epoch=='Hipparcos' else color[1], label=pma_label) # median ms value
             ax.fill_between(aps, ms[:,2], ms[:,4], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 1sigma
             if 2 in pma_levels:
                 ax.fill_between(aps, ms[:,1], ms[:,5], alpha=alpha, color=color[0] if epoch=='Hipparcos' else color[1]) # +/- 2sigma
@@ -263,7 +263,7 @@ class Plotting():
 
         if gaps == 0:
             ax.fill_between(aps, Mpldisc[0], np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
-                            label=r'Disc 3R$_\mathrm{Hill}$',
+                            label=rf'Disc {NRhill:g}R$_\mathrm{{Hill}}$',
                             zorder=disc_zorder)
         else:
             # for i in range(gaps):
@@ -273,7 +273,7 @@ class Plotting():
             #     Mpldisc[:, mask] = 1e3
 
             ax.fill_between(aps, np.min(Mpldisc, axis=0), np.ones(len(aps))*1.0e3, color=disc_color, alpha=disc_alpha, hatch='//',
-                            label=r'Disc 3R$_\mathrm{Hill}$',
+                            label=rf'Disc {NRhill:g}R$_\mathrm{{Hill}}$',
                             zorder=disc_zorder)
 
         return ax
