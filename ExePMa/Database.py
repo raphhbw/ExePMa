@@ -1,3 +1,9 @@
+"""
+Retrieval of Hipparcos-Gaia PMa data and stellar parameters for a single star.
+
+Data come from the Kervella et al. (2022, A&A 657, A7) catalogue, either queried on
+Vizier (J/A+A/657/A7) or read from a local copy.
+"""
 import pandas as pd
 from astroquery.vizier import Vizier
 from astroquery.simbad import Simbad
@@ -5,17 +11,49 @@ import astropy.units as u
 import numpy as np
 
 class Database():
+    """
+    PMa data and stellar parameters of one star, stored in self.data.
+
+    Normally used through PMa rather than directly.
+
+    Parameters
+    ----------
+    star : str, optional
+        Star name, resolved to a HIP number through SIMBAD (e.g. 'HD 107146').
+    hip : str, optional
+        Hipparcos identifier, e.g. 'HIP 60074'; skips the SIMBAD query.
+        One of star or hip is required.
+    gaia : {'eDR3'}, default 'eDR3'
+        Gaia release used for the PMa. Only eDR3 is implemented.
+    geometry : dict, optional
+        Orientation of the system (e.g. of its debris disc) used to deproject the PMa.
+        Keys: inc, inc_err, PA, PA_err [deg]. inc/PA default to
+        None (unknown, marginalised over), their errors to 1 deg.
+    mstar : float, optional
+        Stellar mass [Msun] overriding the catalogue value M1.
+    local_catalog : astropy.table.Table, optional
+        Local copy of the Kervella+22 table (same column names as Vizier). If given,
+        data are read from it instead of querying Vizier.
+
+    Attributes
+    ----------
+    star : str or None
+        Star name as given.
+    hip : str
+        Hipparcos identifier, 'HIP <number>'.
+    geometry : dict
+        Output of build_geometryinfo().
+    gaia : str
+        Gaia release.
+    mstar : float or None
+        Stellar mass override [Msun].
+    data : pandas.DataFrame
+        See get_data().
+    """
     V_EDR3 = Vizier(columns=["**"], catalog="J/A+A/657/A7") # Kervella+22 Vizier Catalog
 
     def __init__(self, **kwargs):
-        """ Potential kwargs:
-            - star: star name (resolved to a HIP number via SIMBAD). Either star or hip is required.
-            - hip: Hipparcos identifier, e.g. 'HIP 12345'. Either star or hip is required.
-            - gaia [default:'eDR3']: gaia epoch required from the Vizier catalogs
-            - geometry [default: {}]: geometry info about the system.
-            - mstar [default: None]: stellar mass [Msun] overriding the catalog value (M1).
-            - local_catalog [default: None]: local copy of the Kervella+22 table (e.g. astropy Table).
-              If given, data is read from it instead of querying Vizier. """
+        """Resolve the HIP identifier and retrieve the data. See class docstring for kwargs."""
         self.star = kwargs.get("star", None)
         self.hip = kwargs.get("hip", None)
 
@@ -32,9 +70,20 @@ class Database():
         self.data = self.get_data(self.gaia, kwargs.get("local_catalog", None))
 
     def build_geometryinfo(self, discinfo):
-        """ Build dictionary with geometry info 
-            inc and PA are given in deg.
-            Returns: Dictionary with geometry information about the system. Values depend on the geometry disctionary given to the function """
+        """
+        Fill in defaults for the system geometry.
+
+        Parameters
+        ----------
+        discinfo : dict
+            May contain inc, inc_err, PA, PA_err [deg].
+
+        Returns
+        -------
+        dict
+            Keys inc and PA (default None = unknown) and inc_err and
+            PA_err (default 1.0) [deg].
+        """
         return {"inc":discinfo.get('inc', None), # default None if no inc is given
                 "inc_err":discinfo.get('inc_err', 1.0), # default 1.0 if no inc_err is given [TODO: check default]
                 "PA":discinfo.get('PA', None), # default None if no PA is given
@@ -42,6 +91,24 @@ class Database():
                 }
     
     def get_hip_number(self, star_name):
+        """
+        Find the Hipparcos identifier of a star through SIMBAD.
+
+        Parameters
+        ----------
+        star_name : str
+            Any identifier SIMBAD can resolve.
+
+        Returns
+        -------
+        str
+            Identifier of the form 'HIP <number>'.
+
+        Raises
+        ------
+        ValueError
+            If the star is not found, is ambiguous, or has no HIP identifier.
+        """
         # Customize Simbad to include the HIP identifier in the results
         custom_simbad = Simbad()
         custom_simbad.TIMEOUT = 10  # Set a timeout for the query
@@ -62,12 +129,26 @@ class Database():
                 print(f"The HIP number of {star_name} is: {identifier.strip()}")
                 return identifier.strip()
         
-        return f"HIP number not found for star '{star_name}'."
+        raise ValueError(f"HIP number not found for star '{star_name}'.")
 
     def vizier_query(self, gaia):
-        """ Query Vizier catalog for Kervella PMa information. 
-            Get info from both gaia and hipparcos. 
-            Returns: info for hip, info for gaia, info on star """
+        """
+        Query the Kervella+22 catalogue on Vizier for self.hip.
+
+        Searches within 1 arcmin of the star (1 deg if nothing is found) and selects
+        the row matching the HIP number.
+
+        Parameters
+        ----------
+        gaia : {'eDR3'}
+            Gaia release. Only eDR3 is implemented.
+
+        Returns
+        -------
+        dhip, dgaia, dparams : dict
+            Hipparcos-epoch PMa, Gaia-epoch PMa and stellar parameters; see
+            get_data() for the keys and units.
+        """
         
         # Initialise the dictionaries
         dhip = {'star':[self.hip]}
@@ -131,6 +212,30 @@ class Database():
         return dhip, dgaia, dparams
     
     def get_data(self, gaia, local_catalog=None):
+        """
+        Build the data table of the star.
+
+        Parameters
+        ----------
+        gaia : {'eDR3'}
+            Gaia release.
+        local_catalog : astropy.table.Table, optional
+            If given, read from it with create_single_star_table();
+            otherwise query Vizier with vizier_query().
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row indexed by HIP identifier, with two-level columns:
+
+            - 'Hipparcos' and gaia (e.g. 'eDR3'): PMa at that epoch, with
+              S_N (signal-to-noise of the PMa), PMa_ra, PMa_ra_err,
+              PMa_dec, PMa_dec_err [mas/yr].
+            - 'params': parallax [mas], dpc [pc], ruwe, mstar [Msun],
+              PA, PA_err, inc, inc_err [deg].
+
+            Access a value with e.g. data['params']['dpc'].iloc[0].
+        """
         d = {}
         
         # Query data from Kervella vizier catalog, or read it from a local copy
@@ -146,7 +251,25 @@ class Database():
         return pd.concat(d, axis=1)
 
     def create_single_star_table(self, local_catalog):
-        """ Same output as vizier_query, but read from a local copy of the Kervella+22 catalog (eDR3 only). """
+        """
+        Same output as vizier_query(), read from a local copy of the catalogue.
+
+        Parameters
+        ----------
+        local_catalog : astropy.table.Table
+            Kervella+22 table with Vizier column names (HIP, snrPMaH2EG3a, ...).
+            ruwe is set to NaN if there is no RUWE column. eDR3 only.
+
+        Returns
+        -------
+        dhip, dgaia, dparams : dict
+            As in vizier_query().
+
+        Raises
+        ------
+        ValueError
+            If self.hip is not in the table.
+        """
 
         dhip = {'star':[self.hip]}
         dgaia = {'star':[self.hip]}

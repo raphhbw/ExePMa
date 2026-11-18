@@ -1,3 +1,11 @@
+"""
+Companion mass constraints from the Hipparcos-Gaia proper motion anomaly (PMa).
+
+Implements the circular-orbit method of Kervella et al. (2019, A&A 623, A72) using the
+PMa values of the Kervella et al. (2022, A&A 657, A7) catalogue. The main entry point is
+the PMa class, which combines catalogue access (Database)
+and plotting (Plotting).
+"""
 import numpy as np
 import os
 
@@ -5,6 +13,34 @@ from ExePMa.Database import Database
 from ExePMa.plotting import Plotting
 
 class PMa(Database, Plotting):
+    """
+    Companion mass versus separation from the PMa of a single star.
+
+    On initialisation the star's PMa and stellar parameters are retrieved (from Vizier or a
+    local catalogue copy) and stored in self.data. Masses are then obtained with
+    mass_retrieval() and plotted with plot_pma().
+
+    Parameters
+    ----------
+    **kwargs
+        Passed to Database; see that class for the full list
+        (star, hip, gaia, geometry, mstar, local_catalog).
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        One row (indexed by HIP identifier) with column groups 'Hipparcos',
+        'eDR3' and 'params'. See get_data().
+
+    Examples
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> from ExePMa import circular_PMa
+    >>> star = circular_PMa.PMa(star='HD 107146')
+    >>> fig, ax = plt.subplots()
+    >>> ax, aps = star.plot_pma(ax, epoch='eDR3', pma_params={'savelog': False})
+    >>> ax = star.add_axis_info(ax)
+    """
     ### units
     M_SUN=1.989e+30 # kg
     AU=1.496e+11   # m
@@ -17,6 +53,7 @@ class PMa(Database, Plotting):
     EPOCHS_DT_HG = {"DR2":24.25, "eDR3":24.75} # years
 
     def __init__(self, **kwargs):
+        """Retrieve the PMa data of the star (prints self.data). See class docstring."""
 
         ### Get all information from Vizier catalog
         Database.__init__(self, **kwargs) # creating data DataFrame
@@ -28,22 +65,62 @@ class PMa(Database, Plotting):
 
     def gamma(self, Pp):
         """
-        Define the function that corrects for the window smearing effect (eq. 13 in section 3.6.2 of Kervella+2019)
+        Correction for smearing of the PMa over the observing window.
+
+        Eq. 13 (Sect. 3.6.2) of Kervella et al. (2019).
+
+        Parameters
+        ----------
+        Pp : float or ndarray
+            Orbital period in units of the observing window length
+            (P / EPOCHS_DT[epoch], dimensionless).
+
+        Returns
+        -------
+        float or ndarray
+            Smearing factor gamma (dimensionless, -> 1 for long periods).
         """
         return Pp/(np.sqrt(2.)*np.pi) * np.sqrt(1. - np.cos(2.*np.pi/Pp))
     
     def period(self, r, m):
         """
-        orbital period as a function of radial separation and mass of the primary (if mass of secondary << mass of primary)
-        r in au
-        m in Msun
+        Keplerian orbital period, assuming the companion mass is negligible.
+
+        Parameters
+        ----------
+        r : float or ndarray
+            Orbital radius [au].
+        m : float
+            Mass of the primary [Msun].
+
+        Returns
+        -------
+        float or ndarray
+            Orbital period [yr].
         """
         return np.sqrt(r**3 / m)
 
     def eta(self, PMa_orb, inc, PA):
         """
-        Deprojection (section 3.6.1)
-        function of the 3D orbital proper motion anomaly vector, the inclination and the parallactic angle
+        Deprojection factor of the PMa vector onto the orbital plane.
+
+        Sect. 3.6.1 of Kervella et al. (2019). The unit PMa vector is rotated into the
+        frame of the system's major axis (PA) and the minor-axis component is
+        deprojected by cos(inc).
+
+        Parameters
+        ----------
+        PMa_orb : float or ndarray
+            Position angle of the PMa vector [deg, east of north].
+        inc : float or ndarray
+            Inclination of the orbital plane [deg].
+        PA : float or ndarray
+            Position angle of the orbital plane's major axis [deg, east of north].
+
+        Returns
+        -------
+        float or ndarray
+            eta = |projected| / |deprojected| PMa (dimensionless, <= 1).
         """
         # projections of pma normalised to unity
         pma_ra = np.sin(PMa_orb*np.pi/180.)
@@ -62,8 +139,28 @@ class PMa(Database, Plotting):
     
     def zeta(self, period, Nrandom, epoch, gaia):
         """
-        When inclination and PA is known
-        correcting for the orbital period of the system (see eq. 14 and section 3.6.3 in Kervella+2019)
+        Efficiency of the PMa as a proxy for the instantaneous orbital velocity.
+
+        Eq. 14 (Sect. 3.6.3) of Kervella et al. (2019) for a circular orbit: the PMa is
+        measured relative to the long-term Hipparcos-Gaia proper motion, which partly
+        absorbs the orbital motion when the period is comparable to the baseline. The
+        orbital phase at the Hipparcos epoch is drawn uniformly Nrandom times.
+
+        Parameters
+        ----------
+        period : float
+            Orbital period [yr].
+        Nrandom : int
+            Number of random orbital phases.
+        epoch : {'Hipparcos', 'DR2', 'eDR3'}
+            Epoch at which the PMa is measured.
+        gaia : {'DR2', 'eDR3'}
+            Gaia release defining the Hipparcos-Gaia baseline (EPOCHS_DT_HG).
+
+        Returns
+        -------
+        ndarray, shape (Nrandom,)
+            zeta (dimensionless).
         """
 
         # Randomly pick position of the star in orbit Nrandom times (Mean Anomaly)
@@ -91,9 +188,28 @@ class PMa(Database, Plotting):
     
     def zeta_v2(self, period, Nrandom, cosi, epoch, gaia): # this incorporates uncertainty through cosi. 
         """
-        When inclination and PA is unknown
-        cosi is one or a set of random inclinations distributed as uniform if no information or as something else
-        e.g. cosi=np.random.uniform(0.0, 1.0, Nrandom)
+        Variant of zeta() that folds the inclination into zeta (currently unused).
+
+        Intended for when the inclination and PA are unknown; see the TODO in
+        calculate_zeta().
+
+        Parameters
+        ----------
+        period : float
+            Orbital period [yr].
+        Nrandom : int
+            Number of random orbital phases.
+        cosi : float or ndarray, shape (Nrandom,)
+            cos(inclination), e.g. np.random.uniform(0, 1, Nrandom) for isotropic orbits.
+        epoch : {'Hipparcos', 'DR2', 'eDR3'}
+            Epoch at which the PMa is measured.
+        gaia : {'DR2', 'eDR3'}
+            Gaia release defining the Hipparcos-Gaia baseline.
+
+        Returns
+        -------
+        ndarray, shape (Nrandom,)
+            zeta (dimensionless).
         """
         
         M1 = np.random.uniform(0.0, 2.*np.pi, Nrandom) # mean anomaly at Hipparcos
@@ -118,6 +234,27 @@ class PMa(Database, Plotting):
         return zeta
 
     def calculate_zeta(self, P, epoch, known_inc, inc, Nrandom):
+        """
+        Evaluate zeta() for each orbital period.
+
+        Parameters
+        ----------
+        P : ndarray, shape (Na,)
+            Orbital periods [yr].
+        epoch : {'Hipparcos', 'DR2', 'eDR3'}
+            Epoch at which the PMa is measured.
+        known_inc : bool
+            Whether the inclination is known. Currently unused (see TODO).
+        inc : ndarray
+            Inclinations [deg]. Currently unused (see TODO).
+        Nrandom : int
+            Number of random orbital phases per period.
+
+        Returns
+        -------
+        ndarray, shape (Na, Nrandom)
+            zeta for each period and random phase.
+        """
         zeta = np.zeros((len(P), Nrandom))
         # [TODO: check what to do about zeta_v2]
         # for i, period in enumerate(P):
@@ -133,9 +270,34 @@ class PMa(Database, Plotting):
 
     def m2(self, rs, v, PA_PMa, epoch, inc, PA, know_inc, Nrandom):
         """
-        links the mass of the secondary (m2), the radial distance (rs), the mass of the primary (mstar) and the v (the norm of the
-        tangential PMa vector converted to linear velocity using the Gaia parallax, "dVt" in the Vizier catalogue)
-        epoch options: Hipparcos, eDR3
+        Companion mass needed to produce a given tangential velocity anomaly.
+
+        m2 = sqrt(mstar / G) * sqrt(r) * (v / eta) / (gamma * zeta), following
+        Kervella et al. (2019). mstar is taken from self.data.
+
+        Parameters
+        ----------
+        rs : ndarray, shape (Na,)
+            Orbital radii [au].
+        v : ndarray, shape (Nrandom,)
+            Norm of the tangential PMa as a linear velocity [m/s] ("dVt" in the catalogue).
+        PA_PMa : ndarray, shape (Nrandom,)
+            Position angle of the PMa vector [deg].
+        epoch : {'Hipparcos', 'eDR3'}
+            Epoch at which the PMa is measured.
+        inc : ndarray, shape (Nrandom,)
+            Inclination samples [deg].
+        PA : ndarray, shape (Nrandom,)
+            Major-axis position angle samples [deg].
+        know_inc : bool
+            Whether the inclination is known (passed to calculate_zeta()).
+        Nrandom : int
+            Number of Monte Carlo samples.
+
+        Returns
+        -------
+        ndarray, shape (Na, Nrandom)
+            Companion masses [Mjup].
         """
 
         eta = self.eta(PA_PMa, inc, PA)
@@ -151,9 +313,29 @@ class PMa(Database, Plotting):
     
     def get_mass_MC(self, data, rs, epoch, Nrandom):
         """
-        Calculates the mass of companion causing the PMa
-        rs [au], PMa [mas], parallax [mas], inc [deg], PA [deg], mstar [Msun], default gaia is 'eDR3'
-        returns ±1,2,3 sigma and mean of m2 at the given rs
+        Monte Carlo distribution of companion masses at each orbital radius.
+
+        Draws Nrandom PMa vectors from the catalogue values and uncertainties, plus
+        inclinations and PAs (Gaussian if given in geometry, otherwise isotropic
+        inclinations and uniform PA in [0, 180) deg), and computes m2() for each.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Star data, normally self.data.
+        rs : ndarray, shape (Na,)
+            Orbital radii [au].
+        epoch : {'Hipparcos', 'eDR3'}
+            Epoch at which the PMa is measured.
+        Nrandom : int
+            Number of Monte Carlo samples.
+
+        Returns
+        -------
+        ndarray, shape (Na, 7)
+            Mass percentiles [Mjup] at each radius, columns
+            0.135, 2.28, 15.9, 50 (median), 84.2, 97.7, 99.865
+            (i.e. -3, -2, -1, 0, +1, +2, +3 sigma).
         """
         PMa_ras = np.random.normal(data[epoch]['PMa_ra'].iloc[0], data[epoch]['PMa_ra_err'].iloc[0], Nrandom)
         PMa_decs=np.random.normal(data[epoch]['PMa_dec'].iloc[0], data[epoch]['PMa_dec_err'].iloc[0], Nrandom)
@@ -193,18 +375,32 @@ class PMa(Database, Plotting):
         return ms
     
     def mass_retrieval(self, epoch, **kwargs):
-        """ Gets the mass of the planet necessary to explain the PMa 
-            Method is from Kervella+2019.
-            Returns: result from mcmc
-            
-            Potential kwargs inside of pma_params dict:
-                - Na [default: 300]: number of semi-major axis to sample
-                - aps [default: np.logspace(-0.5, 2.5, Na)]: semi-major axis values in au
-                - Nrandom [default: 10000]: number of random PMa values per radius
-                - savelog [default: True]: flag for saving the PMa info into a directory
-                - subdir [default: 'log']: name of the repository to save PMa info into
-                - odir [default; './']: path to have the subdir
-                """
+        """
+        Companion mass (percentiles) needed to explain the PMa, versus separation.
+
+        Method of Kervella et al. (2019), assuming a circular orbit. Optionally saves
+        the result to <odir><subdir>/PMa_limits_<epoch>_<star>[_noPA][_noInc].txt.
+
+        Parameters
+        ----------
+        epoch : {'Hipparcos', 'eDR3'}
+            Epoch at which the PMa is measured.
+        pma_params : dict, optional
+            Keyword argument with any of:
+
+            - Na (int, default 300): number of separations to sample.
+            - aps (ndarray, default np.logspace(-0.5, 2.5, Na)): separations [au].
+            - Nrandom (int, default 10000): Monte Carlo samples per separation.
+            - savelog (bool, default True): save the result to a text file.
+            - subdir (str, default 'log'): directory name for the saved file.
+            - odir (str, default './'): parent path of subdir (needs trailing /).
+
+        Returns
+        -------
+        ndarray, shape (Na, 8)
+            Column 0: separations [au]; columns 1-7: mass percentiles [Mjup] as returned
+            by get_mass_MC().
+        """
         # read in any kwargs params
         pma_params = kwargs.get('pma_params', {})
         # default values if not in pma_params
